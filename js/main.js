@@ -135,7 +135,7 @@ $(document).ready(function() {
 		runtime.items = [];
 		var maxRadius = settings.computed.screenRadius - settings.computed.itemRadius;
 		var ratio = Math.PI * (3 - Math.sqrt(5));
-		for (var itemIndex = 0; itemIndex < settings.items; itemIndex++) {
+		for (var itemIndex = 1; itemIndex < settings.items; itemIndex++) {
 			var theta = itemIndex * ratio;
 			var multiplier = Math.sqrt(itemIndex) / Math.sqrt(settings.items);
 			runtime.items.push({
@@ -357,8 +357,13 @@ $(document).ready(function() {
 				context.translate(canvas.width / 2, canvas.height / 2);
 				// rotate around canvas center
 				context.rotate(runtime.lastItemAngleRounded);
-				// draw dots
+				// draw central dot
 				context.fillStyle = settings.foregroundColor;
+				context.beginPath();
+				context.arc(0, 0, settings.computed.itemRadius * 2, 0, Math.PI * 2);
+				context.closePath();
+				context.fill();
+				// draw dots
 				for (var itemIndex = 0; itemIndex < runtime.items.length; itemIndex++) {
 					var item = runtime.items[itemIndex];
 					context.beginPath();
