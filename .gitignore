@@ -1,2 +1,4 @@
 # PHPStorm project files
 .idea
+# Submodules
+lib/
