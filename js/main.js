@@ -8,6 +8,7 @@ $(document).ready(function() {
 			identifier: 'migraine',
 			expires: 30
 		},
+		anglePrecision: 1000,
 		computed: {}
 	};
 	// defaults
@@ -33,25 +34,25 @@ $(document).ready(function() {
 		isFullscreenAvailable: function() {
 			return (canvas.requestFullscreen || canvas.webkitRequestFullScreen || canvas.mozRequestFullScreen || canvas.msRequestFullscreen);
 		},
-		canvasSize: function() {
-			return Math.min(canvas.width, canvas.height);
+		canvasRadius: function() {
+			return Math.min(canvas.width, canvas.height) / 2; // do not factor in setting for canvas size
 		},
 		computed: {} // computed settings placeholder (allows calling frequently without recalculating)
 	};
 	// runtime/state variables
 	var runtime = {
-		// frame rate variables
 		timeLastFrameDrawn: null,
 		timeSinceLastFrameDrawn: null,
-		itemOffsetActual: 0,
-		itemOffsetRounded: 0,
-		lastItemOffsetRounded: 0,
+		itemAngleActual: 0,
+		itemAngleRounded: 0,
+		lastItemAngleRounded: 0,
 		playNoteHandle: null,
 		previousNoteIndex: 0,
 		currentNoteIndex: 0,
 		isDrawing: false,
 		isPlaying: false,
-		stopAfterHandle: null
+		stopAfterHandle: null,
+		items: []
 	};
 
 	// compute constants
@@ -61,7 +62,7 @@ $(document).ready(function() {
 		constants.computed.noteElements[$this.attr('data-note')] = $this[0];
 	});
 	// add cookie support to constants
-	Cookies.set('testCookieSupport', 'yes') // set test cookie
+	Cookies.set('testCookieSupport', 'yes'); // set test cookie
 	if (Cookies.get('testCookieSupport') == 'yes') { // try to read test cookie
 		// if support exists, set on
 		constants.computed.cookieSupport = true;
@@ -73,7 +74,6 @@ $(document).ready(function() {
 
 	// canvas and context
 	var canvas = document.getElementById('app-canvas');
-	var $canvas = $('#app-canvas');
 	var context = canvas.getContext('2d');
 
 	// call resize
@@ -128,9 +128,21 @@ $(document).ready(function() {
 		// compute settings
 		computeSettings();
 		// apply settings
-		runtime.itemOffsetActual = 0;
-		runtime.itemOffsetRounded = 0;
-		runtime.lastItemOffsetRounded = -1;
+		runtime.itemAngleActual = 0;
+		runtime.itemAngleRounded = 0;
+		runtime.lastItemAngleRounded = -1;
+		// determine item positions using Vogel's Approximation Method of Allocation
+		runtime.items = [];
+		var maxRadius = settings.computed.screenRadius - settings.computed.itemRadius;
+		var ratio = Math.PI * (3 - Math.sqrt(5));
+		for (var itemIndex = 1; itemIndex <= settings.items; itemIndex++) {
+			var theta = itemIndex * ratio;
+			var multiplier = Math.sqrt(itemIndex) / Math.sqrt(settings.items);
+			runtime.items.push({
+				x: multiplier * Math.cos(theta) * maxRadius,
+				y: multiplier * Math.sin(theta) * maxRadius
+			});
+		}
 		// enable metronome if on
 		if (settings.metronome) {
 			// set note handle
@@ -207,13 +219,13 @@ $(document).ready(function() {
 		var hasChanged = false;
 		if (canvas.width != windowWidth) {
 			// update width on change
-			$canvas.css('width', windowWidth); // override css
+			canvas.setAttribute('width', parseInt(windowWidth));
 			hasChanged = true;
 		}
 		if (canvas.height != windowHeight) {
 			// update height on change
 			hasChanged = true;
-			$canvas.css('height', windowHeight); // override css
+			canvas.setAttribute('height', parseInt(windowHeight));
 		}
 		// clear computed settings on change
 		if (hasChanged) {
@@ -335,52 +347,44 @@ $(document).ready(function() {
 		if (runtime.timeSinceLastFrameDrawn > settings.computed.msPerFrame) {
 			runtime.timeLastFrameDrawn = timeNow - (runtime.timeSinceLastFrameDrawn % settings.computed.msPerFrame);
 			// only draw if animation has moved
-			if (runtime.lastItemOffsetRounded != runtime.itemOffsetRounded) {
+			if (runtime.lastItemAngleRounded != runtime.itemAngleRounded) {
 				// stop drawing
 				context.save();
-				// clear frame
-				context.clearRect(0, 0, canvas.width, canvas.height);
+				// draw background
+				context.fillStyle = settings.backgroundColor;
+				context.fillRect(0, 0, canvas.width, canvas.height);
+				// set origin to canvas center
+				context.translate(canvas.width / 2, canvas.height / 2);
+				// rotate around canvas center
+				context.rotate(runtime.lastItemAngleRounded);
 				// draw dots
-				/*
-				 context.fillStyle = settings.stripeColor;
-				 for (var barPixelCoord = -settings.computed.stripeSize * 4 + runtime.stripeOffsetRounded; barPixelCoord < settings.canvasSize() + settings.computed.stripeSize * 2; barPixelCoord += settings.computed.stripeSize * 2) {
-				 if (settings.computed.isMovementHorizontal) {
-				 context.fillRect(barPixelCoord + runtime.stripeOffsetRounded, 0, settings.computed.stripeSize, canvas.height);
-				 } else {
-				 context.fillRect(0, barPixelCoord + runtime.stripeOffsetRounded, canvas.width, settings.computed.stripeSize);
-				 }
-				 }
-				 // draw background
-				 context.fillStyle = settings.backgroundColor;
-				 for (var barPixelCoord = -settings.computed.stripeSize * 3 + runtime.stripeOffsetRounded; barPixelCoord < settings.canvasSize() + settings.computed.stripeSize * 2; barPixelCoord += settings.computed.stripeSize * 2) {
-				 if (settings.computed.isMovementHorizontal) {
-				 context.fillRect(barPixelCoord + runtime.stripeOffsetRounded, 0, settings.computed.stripeSize, canvas.height);
-				 } else {
-				 context.fillRect(0, barPixelCoord + runtime.stripeOffsetRounded, canvas.width, settings.computed.stripeSize);
-				 }
-				 }
-				 */
+				context.fillStyle = settings.foregroundColor;
+				for (var itemIndex = 0; itemIndex < runtime.items.length; itemIndex++) {
+					var item = runtime.items[itemIndex];
+					context.beginPath();
+					context.arc(item.x, item.y, settings.computed.itemRadius, 0, Math.PI * 2);
+					context.closePath();
+					context.fill();
+				}
 				// resume drawing
 				context.restore();
 			}
 			// move
-			/*
-			 if (settings.computed.isMovementForward) {
-			 runtime.stripeOffsetActual += settings.computed.movePixelsPerFrame;
-			 if (runtime.stripeOffsetActual >= settings.computed.stripeSize * 2) {
-			 runtime.stripeOffsetActual = 0;
-			 }
-			 } else {
-			 runtime.stripeOffsetActual -= settings.computed.movePixelsPerFrame;
-			 if (runtime.stripeOffsetActual <= -settings.computed.stripeSize * 2) {
-			 runtime.stripeOffsetActual = 0;
-			 }
-			 }
-			 */
+			if (settings.computed.isDirectionClockwise) {
+				runtime.itemAngleActual += settings.computed.rotationAnglePerFrame;
+				if (runtime.itemAngleActual >= Math.PI * 2) {
+					runtime.itemAngleActual %= Math.PI * 2;
+				}
+			} else {
+				runtime.itemAngleActual -= settings.computed.rotationAnglePerFrame;
+				while (runtime.itemAngleActual < 0) {
+					runtime.itemAngleActual += Math.PI * 2;
+				}
+			}
 			// update last
-			runtime.lastItemOffsetRounded = runtime.itemOffsetRounded;
+			runtime.lastItemAngleRounded = runtime.itemAngleRounded;
 			// round
-			runtime.itemOffsetRounded = Math.round(runtime.itemOffsetActual * 2) / 2;
+			runtime.itemAngleRounded = Math.round(runtime.itemAngleActual * constants.anglePrecision) / constants.anglePrecision;
 		}
 		// continue to next animation frame if drawing
 		if (runtime.isDrawing) {
@@ -405,9 +409,9 @@ $(document).ready(function() {
 		settings.computed = {};
 		settings.computed.isDirectionClockwise = (settings.direction == 'clockwise');
 		settings.computed.msPerFrame = (1000 / defaults.framesPerSecond);
-		settings.computed.itemSize = (settings.canvasSize() * settings.itemSize / 100);
-		settings.computed.screenSize = (settings.canvasSize() * settings.screenSize / 100);
-		settings.computed.movePixelsPerFrame = (settings.canvasSize() / (settings.speed * defaults.framesPerSecond));
+		settings.computed.itemRadius = (settings.canvasRadius() * settings.itemSize / 100);
+		settings.computed.screenRadius = (settings.canvasRadius() * settings.screenSize / 100);
+		settings.computed.rotationAnglePerFrame = (Math.PI * 2 * 2 / settings.speed / defaults.framesPerSecond);
 		settings.computed.noteSeconds = (1.0 / settings.frequency) / parseFloat(constants.notes);
 		settings.computed.scaleSeconds = (1.0 / settings.frequency);
 	}
