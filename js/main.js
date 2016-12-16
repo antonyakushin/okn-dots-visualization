@@ -4,16 +4,21 @@ $(document).ready(function() {
 	// constants
 	var constants = {
 		notes: 14,
-		cookieOptions: { expires: 30 },
+		cookieOptions: {
+			identifier: 'migraine',
+			expires: 30
+		},
 		computed: {}
 	};
 	// defaults
 	var defaults = {
-		movement: 'left-to-right',
-		stripes: 15,
+		direction: 'clockwise',
+		items: 15,
 		speed: 20,
-		stripeColor: '#999',
-		backgroundColor: '#CCC',
+		itemSize: 5.00,
+		screenSize: 100.00,
+		foregroundColor: '#CCC',
+		backgroundColor: '#000',
 		metronome: 'off',
 		frequency: 0.05,
 		stopAfter: '',
@@ -29,7 +34,7 @@ $(document).ready(function() {
 			return (canvas.requestFullscreen || canvas.webkitRequestFullScreen || canvas.mozRequestFullScreen || canvas.msRequestFullscreen);
 		},
 		canvasSize: function() {
-			return (settings.computed.isMovementHorizontal ? canvas.width : canvas.height);
+			return Math.min(canvas.width, canvas.height);
 		},
 		computed: {} // computed settings placeholder (allows calling frequently without recalculating)
 	};
@@ -38,9 +43,9 @@ $(document).ready(function() {
 		// frame rate variables
 		timeLastFrameDrawn: null,
 		timeSinceLastFrameDrawn: null,
-		stripeOffsetActual: 0,
-		stripeOffsetRounded: 0,
-		lastStripeOffsetRounded: 0,
+		itemOffsetActual: 0,
+		itemOffsetRounded: 0,
+		lastItemOffsetRounded: 0,
 		playNoteHandle: null,
 		previousNoteIndex: 0,
 		currentNoteIndex: 0,
@@ -48,7 +53,7 @@ $(document).ready(function() {
 		isPlaying: false,
 		stopAfterHandle: null
 	};
-	
+
 	// compute constants
 	constants.computed.noteElements = {};
 	$('audio[data-note]').each(function() {
@@ -65,12 +70,12 @@ $(document).ready(function() {
 		// if support does not exist, set off
 		constants.computed.cookieSupport = false;
 	}
-	
+
 	// canvas and context
 	var canvas = document.getElementById('app-canvas');
 	var $canvas = $('#app-canvas');
 	var context = canvas.getContext('2d');
-	
+
 	// call resize
 	resizeCanvas();
 	// check if fullscreen is available
@@ -103,14 +108,16 @@ $(document).ready(function() {
 		// scroll to top
 		scrollToTop();
 	});
-	
+
 	// settings run button
 	$('#settings-run-button').on('click', function() {
 		// save settings
-		settings.movement = $('#settings-movement').val();
-		settings.stripes = parseInt($('#settings-stripes').val());
+		settings.direction = $('#settings-direction').val();
+		settings.items = parseInt($('#settings-items').val());
 		settings.speed = parseInt($('#settings-speed').val());
-		settings.stripeColor = $('#settings-color-stripe').spectrum('get').toHexString();
+		settings.itemSize = parseFloat($('#settings-item-size').val());
+		settings.screenSize = parseFloat($('#settings-screen-size').val());
+		settings.foregroundColor = $('#settings-color-foreground').spectrum('get').toHexString();
 		settings.backgroundColor = $('#settings-color-background').spectrum('get').toHexString();
 		settings.metronome = ($('#settings-metronome').val() == 'on');
 		settings.frequency = parseFloat($('#settings-frequency').val());
@@ -121,9 +128,9 @@ $(document).ready(function() {
 		// compute settings
 		computeSettings();
 		// apply settings
-		runtime.stripeOffsetActual = 0;
-		runtime.stripeOffsetRounded = 0;
-		runtime.lastStripeOffsetRounded = -1;
+		runtime.itemOffsetActual = 0;
+		runtime.itemOffsetRounded = 0;
+		runtime.lastItemOffsetRounded = -1;
 		// enable metronome if on
 		if (settings.metronome) {
 			// set note handle
@@ -152,7 +159,7 @@ $(document).ready(function() {
 			} else if (canvas.webkitRequestFullScreen) {
 				canvas.webkitRequestFullScreen();
 			} else if (canvas.mozRequestFullScreen) {
-				canvas.mozRequestFullScreen(); 
+				canvas.mozRequestFullScreen();
 			} else if (canvas.msRequestFullscreen) {
 				canvas.msRequestFullscreen();
 			}
@@ -179,7 +186,7 @@ $(document).ready(function() {
 		// update saved settings
 		updateSavedSettings();
 	});
-	
+
 	// app panel
 	$('#app-panel').on('click', returnToSettings); // return to settings
 	// keypress
@@ -190,7 +197,7 @@ $(document).ready(function() {
 			returnToSettings();
 		}
 	});
-	
+
 	// resize canvas to full screen
 	function resizeCanvas() {
 		// get window size
@@ -214,7 +221,7 @@ $(document).ready(function() {
 		}
 	}
 	$(window).on('resize', resizeCanvas);
-	
+
 	// when metronome changed
 	$('#settings-metronome').on('change', function() {
 		var $this = $(this);
@@ -230,18 +237,19 @@ $(document).ready(function() {
 			returnToSettings();
 		}
 	});
-	
+
 	// enforce integer-only inputs
 	$('.integers-only').on('blur', function() {
 		var $this = $(this);
 		var cleanVal = $this.val().replace(/[^0-9]/g, '');
+		cleanVal = parseInt(cleanVal);
 		if (!cleanVal) {
 			switch ($this.attr('id')) {
-				case 'settings-movement':
-					cleanVal = defaults.movement;
+				case 'settings-direction':
+					cleanVal = defaults.direction;
 					break;
-				case 'settings-stripes':
-					cleanVal = defaults.stripes;
+				case 'settings-items':
+					cleanVal = defaults.items;
 					break;
 				case 'settings-speed':
 					cleanVal = defaults.speed;
@@ -261,7 +269,7 @@ $(document).ready(function() {
 			$this.val(cleanVal);
 		}
 	});
-	
+
 	// enforce decimals-only inputs
 	$('.decimals-only').on('blur', function() {
 		var $this = $(this);
@@ -269,8 +277,27 @@ $(document).ready(function() {
 		if (!$.isNumeric(cleanVal)) {
 			cleanVal = 0;
 		}
+		cleanVal = parseFloat(cleanVal);
+		switch ($this.attr('id')) {
+			case 'settings-item-size':
+				if (cleanVal > 100) {
+					cleanVal = 100;
+				}
+				break;
+			case 'settings-screen-size':
+				if (cleanVal > 100) {
+					cleanVal = 100;
+				}
+				break;
+		}
 		if (!cleanVal) {
 			switch ($this.attr('id')) {
+				case 'settings-item-size':
+					cleanVal = defaults.itemSize;
+					break;
+				case 'settings-screen-size':
+					cleanVal = defaults.screenSize;
+					break;
 				case 'settings-frequency':
 					cleanVal = defaults.frequency;
 					break;
@@ -281,7 +308,7 @@ $(document).ready(function() {
 			return false;
 		}
 	});
-	
+
 	// on frequency update
 	$('#settings-frequency').on('keydown blur', function(e) {
 		var $this = $(this);
@@ -299,7 +326,7 @@ $(document).ready(function() {
 		}
 		$('#settings-frequency-explanation').html(Math.round(1.0 / parseFloat($this.val()), 5));
 	});
-	
+
 	// draw canvas frame
 	function drawCanvasFrame() {
 		// draw using framerate
@@ -308,129 +335,141 @@ $(document).ready(function() {
 		if (runtime.timeSinceLastFrameDrawn > settings.computed.msPerFrame) {
 			runtime.timeLastFrameDrawn = timeNow - (runtime.timeSinceLastFrameDrawn % settings.computed.msPerFrame);
 			// only draw if animation has moved
-			if (runtime.lastStripeOffsetRounded != runtime.stripeOffsetRounded) {
+			if (runtime.lastItemOffsetRounded != runtime.itemOffsetRounded) {
 				// stop drawing
 				context.save();
 				// clear frame
 				context.clearRect(0, 0, canvas.width, canvas.height);
-				// draw stripes
-				context.fillStyle = settings.stripeColor;
-				for (var barPixelCoord = -settings.computed.stripeSize * 4 + runtime.stripeOffsetRounded; barPixelCoord < settings.canvasSize() + settings.computed.stripeSize * 2; barPixelCoord += settings.computed.stripeSize * 2) {
-					if (settings.computed.isMovementHorizontal) {
-						context.fillRect(barPixelCoord + runtime.stripeOffsetRounded, 0, settings.computed.stripeSize, canvas.height);
-					} else {
-						context.fillRect(0, barPixelCoord + runtime.stripeOffsetRounded, canvas.width, settings.computed.stripeSize);
-					}
-				}
-				// draw background
-				context.fillStyle = settings.backgroundColor;
-				for (var barPixelCoord = -settings.computed.stripeSize * 3 + runtime.stripeOffsetRounded; barPixelCoord < settings.canvasSize() + settings.computed.stripeSize * 2; barPixelCoord += settings.computed.stripeSize * 2) {
-					if (settings.computed.isMovementHorizontal) {
-						context.fillRect(barPixelCoord + runtime.stripeOffsetRounded, 0, settings.computed.stripeSize, canvas.height);
-					} else {
-						context.fillRect(0, barPixelCoord + runtime.stripeOffsetRounded, canvas.width, settings.computed.stripeSize);
-					}
-				}
+				// draw dots
+				/*
+				 context.fillStyle = settings.stripeColor;
+				 for (var barPixelCoord = -settings.computed.stripeSize * 4 + runtime.stripeOffsetRounded; barPixelCoord < settings.canvasSize() + settings.computed.stripeSize * 2; barPixelCoord += settings.computed.stripeSize * 2) {
+				 if (settings.computed.isMovementHorizontal) {
+				 context.fillRect(barPixelCoord + runtime.stripeOffsetRounded, 0, settings.computed.stripeSize, canvas.height);
+				 } else {
+				 context.fillRect(0, barPixelCoord + runtime.stripeOffsetRounded, canvas.width, settings.computed.stripeSize);
+				 }
+				 }
+				 // draw background
+				 context.fillStyle = settings.backgroundColor;
+				 for (var barPixelCoord = -settings.computed.stripeSize * 3 + runtime.stripeOffsetRounded; barPixelCoord < settings.canvasSize() + settings.computed.stripeSize * 2; barPixelCoord += settings.computed.stripeSize * 2) {
+				 if (settings.computed.isMovementHorizontal) {
+				 context.fillRect(barPixelCoord + runtime.stripeOffsetRounded, 0, settings.computed.stripeSize, canvas.height);
+				 } else {
+				 context.fillRect(0, barPixelCoord + runtime.stripeOffsetRounded, canvas.width, settings.computed.stripeSize);
+				 }
+				 }
+				 */
 				// resume drawing
 				context.restore();
 			}
 			// move
-			if (settings.computed.isMovementForward) {
-				runtime.stripeOffsetActual += settings.computed.movePixelsPerFrame;
-				if (runtime.stripeOffsetActual >= settings.computed.stripeSize * 2) {
-					runtime.stripeOffsetActual = 0;
-				}
-			} else {
-				runtime.stripeOffsetActual -= settings.computed.movePixelsPerFrame;
-				if (runtime.stripeOffsetActual <= -settings.computed.stripeSize * 2) {
-					runtime.stripeOffsetActual = 0;
-				}
-			}
+			/*
+			 if (settings.computed.isMovementForward) {
+			 runtime.stripeOffsetActual += settings.computed.movePixelsPerFrame;
+			 if (runtime.stripeOffsetActual >= settings.computed.stripeSize * 2) {
+			 runtime.stripeOffsetActual = 0;
+			 }
+			 } else {
+			 runtime.stripeOffsetActual -= settings.computed.movePixelsPerFrame;
+			 if (runtime.stripeOffsetActual <= -settings.computed.stripeSize * 2) {
+			 runtime.stripeOffsetActual = 0;
+			 }
+			 }
+			 */
 			// update last
-			runtime.lastStripeOffsetRounded = runtime.stripeOffsetRounded;
+			runtime.lastItemOffsetRounded = runtime.itemOffsetRounded;
 			// round
-			runtime.stripeOffsetRounded = Math.round(runtime.stripeOffsetActual * 2) / 2;
+			runtime.itemOffsetRounded = Math.round(runtime.itemOffsetActual * 2) / 2;
 		}
 		// continue to next animation frame if drawing
 		if (runtime.isDrawing) {
 			window.requestAnimationFrame(drawCanvasFrame);
 		}
 	}
-	
+
 	// restore default settings on load
 	resetDefaults();
 	// attempt to load saved settings if they exist
 	restoreSavedSettings();
-	
+
 	// helper functions
 
 	// scroll to top smoothly
 	function scrollToTop() {
 		$('html,body').animate({ scrollTop: 0 }, 'fast');
 	}
-	
+
 	// re-compute settings
 	function computeSettings() {
 		settings.computed = {};
-		settings.computed.isMovementHorizontal = (settings.movement == 'left-to-right' || settings.movement == 'right-to-left');
-		settings.computed.isMovementForward = (settings.movement == 'left-to-right' || settings.movement == 'top-to-bottom');
+		settings.computed.isDirectionClockwise = (settings.direction == 'clockwise');
 		settings.computed.msPerFrame = (1000 / defaults.framesPerSecond);
-		settings.computed.stripeSize = (settings.canvasSize() / settings.stripes);
+		settings.computed.itemSize = (settings.canvasSize() * settings.itemSize / 100);
+		settings.computed.screenSize = (settings.canvasSize() * settings.screenSize / 100);
 		settings.computed.movePixelsPerFrame = (settings.canvasSize() / (settings.speed * defaults.framesPerSecond));
 		settings.computed.noteSeconds = (1.0 / settings.frequency) / parseFloat(constants.notes);
 		settings.computed.scaleSeconds = (1.0 / settings.frequency);
 	}
-	
+
 	// update saved settings
 	function updateSavedSettings() {
-		setSavedSetting('mdds.app.settings.movement', $('#settings-movement').val());
-		setSavedSetting('mdds.app.settings.stripes', $('#settings-stripes').val());
-		setSavedSetting('mdds.app.settings.speed', $('#settings-speed').val());
-		setSavedSetting('mdds.app.settings.metronome', $('#settings-metronome').val());
-		setSavedSetting('mdds.app.settings.frequency', $('#settings-frequency').val());
-		setSavedSetting('mdds.app.settings.stopAfter', $('#settings-stop-after').val());
-		setSavedSetting('mdds.app.settings.fullscreen', $('#settings-fullscreen').val());
-		setSavedSetting('mdds.app.settings.stripeColor', $('#settings-color-stripe').spectrum('get').toHexString());
-		setSavedSetting('mdds.app.settings.backgroundColor', $('#settings-color-background').spectrum('get').toHexString());
+		setSavedSetting(constants.cookieOptions.identifier + '.app.settings.direction', $('#settings-direction').val());
+		setSavedSetting(constants.cookieOptions.identifier + '.app.settings.speed', $('#settings-speed').val());
+		setSavedSetting(constants.cookieOptions.identifier + '.app.settings.itemSize', $('#settings-item-size').val());
+		setSavedSetting(constants.cookieOptions.identifier + '.app.settings.screenSize', $('#settings-screen-size').val());
+		setSavedSetting(constants.cookieOptions.identifier + '.app.settings.items', $('#settings-items').val());
+		setSavedSetting(constants.cookieOptions.identifier + '.app.settings.metronome', $('#settings-metronome').val());
+		setSavedSetting(constants.cookieOptions.identifier + '.app.settings.frequency', $('#settings-frequency').val());
+		setSavedSetting(constants.cookieOptions.identifier + '.app.settings.stopAfter', $('#settings-stop-after').val());
+		setSavedSetting(constants.cookieOptions.identifier + '.app.settings.fullscreen', $('#settings-fullscreen').val());
+		setSavedSetting(constants.cookieOptions.identifier + '.app.settings.foregroundColor', $('#settings-color-foreground').spectrum('get').toHexString());
+		setSavedSetting(constants.cookieOptions.identifier + '.app.settings.backgroundColor', $('#settings-color-background').spectrum('get').toHexString());
 	}
-	
+
 	// restore saved settings
 	function restoreSavedSettings() {
-		if (getSavedSetting('mdds.app.settings.movement')) {
-			$('#settings-movement').val(getSavedSetting('mdds.app.settings.movement'));
+		if (getSavedSetting(constants.cookieOptions.identifier + '.app.settings.direction')) {
+			$('#settings-direction').val(getSavedSetting(constants.cookieOptions.identifier + '.app.settings.direction'));
 		}
-		if (getSavedSetting('mdds.app.settings.stripes')) {
-			$('#settings-stripes').val(getSavedSetting('mdds.app.settings.stripes'));
+		if (getSavedSetting(constants.cookieOptions.identifier + '.app.settings.items')) {
+			$('#settings-items').val(getSavedSetting(constants.cookieOptions.identifier + '.app.settings.items'));
 		}
-		if (getSavedSetting('mdds.app.settings.speed')) {
-			$('#settings-speed').val(getSavedSetting('mdds.app.settings.speed'));
+		if (getSavedSetting(constants.cookieOptions.identifier + '.app.settings.speed')) {
+			$('#settings-speed').val(getSavedSetting(constants.cookieOptions.identifier + '.app.settings.speed'));
 		}
-		if (getSavedSetting('mdds.app.settings.metronome')) {
-			$('#settings-metronome').val(getSavedSetting('mdds.app.settings.metronome'));
+		if (getSavedSetting(constants.cookieOptions.identifier + '.app.settings.itemSize')) {
+			$('#settings-item-size').val(getSavedSetting(constants.cookieOptions.identifier + '.app.settings.itemSize'));
 		}
-		if (getSavedSetting('mdds.app.settings.frequency')) {
-			$('#settings-frequency').val(getSavedSetting('mdds.app.settings.frequency'));
+		if (getSavedSetting(constants.cookieOptions.identifier + '.app.settings.screenSize')) {
+			$('#settings-screen-size').val(getSavedSetting(constants.cookieOptions.identifier + '.app.settings.screenSize'));
 		}
-		if (getSavedSetting('mdds.app.settings.stopAfter')) {
-			$('#settings-stop-after').val(getSavedSetting('mdds.app.settings.stopAfter'));
+		if (getSavedSetting(constants.cookieOptions.identifier + '.app.settings.metronome')) {
+			$('#settings-metronome').val(getSavedSetting(constants.cookieOptions.identifier + '.app.settings.metronome'));
 		}
-		if (getSavedSetting('mdds.app.settings.fullscreen')) {
-			$('#settings-fullscreen').val(getSavedSetting('mdds.app.settings.fullscreen'));
+		if (getSavedSetting(constants.cookieOptions.identifier + '.app.settings.frequency')) {
+			$('#settings-frequency').val(getSavedSetting(constants.cookieOptions.identifier + '.app.settings.frequency'));
 		}
-		if (getSavedSetting('mdds.app.settings.stripeColor')) {
-			$('#settings-color-stripe').spectrum({
-				color: getSavedSetting('mdds.app.settings.stripeColor')
+		if (getSavedSetting(constants.cookieOptions.identifier + '.app.settings.stopAfter')) {
+			$('#settings-stop-after').val(getSavedSetting(constants.cookieOptions.identifier + '.app.settings.stopAfter'));
+		}
+		if (getSavedSetting(constants.cookieOptions.identifier + '.app.settings.fullscreen')) {
+			$('#settings-fullscreen').val(getSavedSetting(constants.cookieOptions.identifier + '.app.settings.fullscreen'));
+		}
+		if (getSavedSetting(constants.cookieOptions.identifier + '.app.settings.foregroundColor')) {
+			$('#settings-color-foreground').spectrum({
+				color: getSavedSetting(constants.cookieOptions.identifier + '.app.settings.foregroundColor')
 			});
 		}
-		if (getSavedSetting('mdds.app.settings.backgroundColor')) {
+		if (getSavedSetting(constants.cookieOptions.identifier + '.app.settings.backgroundColor')) {
 			$('#settings-color-background').spectrum({
-				color: getSavedSetting('mdds.app.settings.backgroundColor')
+				color: getSavedSetting(constants.cookieOptions.identifier + '.app.settings.backgroundColor')
 			});
 		}
 		// update dependent settings elements
 		updateDependentSettingsElements();
 	}
-	
+
 	// get saved setting
 	function getSavedSetting(name) {
 		// check if cookies are supported
@@ -454,20 +493,22 @@ $(document).ready(function() {
 			localStorage.setItem(name, value);
 		}
 	}
-	
+
 	// reset defaults
 	function resetDefaults() {
 		// inputs
-		$('#settings-movement').val(defaults.movement);
-		$('#settings-stripes').val(defaults.stripes);
+		$('#settings-direction').val(defaults.direction);
+		$('#settings-items').val(defaults.items);
 		$('#settings-speed').val(defaults.speed);
+		$('#settings-item-size').val(defaults.itemSize);
+		$('#settings-screen-size').val(defaults.screenSize);
 		$('#settings-metronome').val(defaults.metronome);
 		$('#settings-frequency').val(defaults.frequency);
 		$('#settings-stop-after').val(defaults.stopAfter);
 		$('#settings-fullscreen').val(defaults.fullscreen);
 		// color pickers
-		$('#settings-color-stripe').spectrum({
-			color: defaults.stripeColor
+		$('#settings-color-foreground').spectrum({
+			color: defaults.foregroundColor
 		});
 		$('#settings-color-background').spectrum({
 			color: defaults.backgroundColor
@@ -481,7 +522,7 @@ $(document).ready(function() {
 		$('#settings-metronome').trigger('change');
 		$('#settings-frequency').trigger('blur');
 	}
-	
+
 	// exit app and return to settings
 	function returnToSettings() {
 		// clear stop after handle if it exists
@@ -497,7 +538,7 @@ $(document).ready(function() {
 			} else if (document.webkitIsFullScreen) {
 				document.webkitCancelFullScreen();
 			} else if (document.mozFullScreen) {
-				document.mozCancelFullScreen(); 
+				document.mozCancelFullScreen();
 			} else if (document.msFullscreenElement) {
 				document.msExitFullscreen();
 			}
@@ -519,7 +560,7 @@ $(document).ready(function() {
 		// scroll to top
 		scrollToTop();
 	}
-	
+
 	// play next note
 	function playNextNote() {
 		// stop previous note and rewind if playing
@@ -541,7 +582,7 @@ $(document).ready(function() {
 			runtime.currentNoteIndex = 0;
 		}
 	}
-	
+
 	// get note based on index
 	function noteForIndex(noteIndex) {
 		// write out each note for clarity
@@ -578,5 +619,5 @@ $(document).ready(function() {
 				return null;
 		}
 	}
-	
+
 });

@@ -2,7 +2,7 @@
 <html lang="en">
 	<head>
 		<meta charset="utf-8" />
-		<title>MdDS Web Application</title>
+		<title>Migraine Web Application</title>
 		<meta name="viewport" content="width=device-width, initial-scale=1">
 		<link rel="stylesheet" href="lib/bootstrap/dist/css/bootstrap.min.css">
 		<link rel="stylesheet" href="lib/spectrum/spectrum.css">
@@ -16,7 +16,7 @@
 			<div id="disclaimer-panel" class="row">
 				<div class="col-sm-12">
 				
-					<h1>MdDS Web Application</h1>
+					<h1>Migraine Web Application</h1>
 
 					<div class="alert alert-danger">
 					<p><strong>Disclaimer</strong></p>
@@ -24,66 +24,70 @@
 					</div>
 					
 					<h1>Welcome</h1>
-					<p>This web application helps doctors and researchers treat patients with MdDS (Mal de Débarquement Syndrome). A common treatment involves the patient watching stripes moving across a screen. This web application provides this treatment, and works on any modern browser or mobile device.</p>
-					
-					<p><strong>Use Offline:</strong><br />
-					This web application can be used offline if downloaded from <a href="MdDS.zip">here</a>. After downloading, unzip the downloaded file to a location on your computer and open index.html in your web browser. This code is open-source, and available to everyone on <a href="https://github.com/antonyakushin/MdDS" target="_blank">GitHub</a>.</p>
-					
-					<p><strong>Report Bugs or Request Features:</strong><br />
-					Please report issues and feature requests <a href="https://github.com/antonyakushin/MdDS/issues" target="_blank">here</a>. If you are reporting a bug, please make sure to provide enough information for us to reproduce the issue (a detailed description, screenshot, or screen recording is preferred). Please also indicate your device or operating system.</p>
+					<p>This web application helps doctors and researchers treat patients with migraines. A common treatment involves the patient watching dots rotating on a screen in a dark room. This web application provides this treatment, and works on any modern browser or mobile device.</p>
 					
 					<h1>System Requirements</h1>
 					<p>On Windows and Mac, this application supports the latest versions of the following browsers: Google Chrome, Mozilla Firefox, Internet Explorer 10+, Safari, Opera, and Microsoft Edge. Mobile device support varies by device and vendor (the latest versions of major mobile browsers are typically supported). This application works in browsers which support HTML5 Canvas and requestAnimationFrame(). This application also uses cookies and local browser storage to save settings.</p>				
 					
 					<h1>License</h1>
-					<p>The MIT License (MIT)</p>
-					<p>Copyright (c) 2016 Anton Yakushin</p>
-					<p>Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:</p>
-					<p>The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.</p>
 					<p>THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.</p>
-					
+
+					<h1>Copyright</h1>
+					<p>Copyright &copy; Anton Yakushin - All Rights Reserved.<br />
+					This web application is proprietary and confidential. Unauthorized copying of this file and any file used in this web application, via any medium, is strictly prohibited.<br />
+					Written by Anton Yakushin, December 16, 2016</p>
+
 					<h1>Accept</h1>
-					<p>Click the button below to accept the terms of the Disclaimer and License above.</p>
+					<p>Click the button below to accept the terms of the Disclaimer, License, and Copyright above.</p>
 					<button class="btn btn-danger btn-lg" id="disclaimer-button">Accept and Continue</button>
-				
+
 				</div>
 			</div>
-			
+
 			<!-- settings panel -->
 			<div id="settings-panel" class="row default-hidden">
 				<div class="col-sm-12">
-				
+
 					<h1>Settings</h1>
 
 					<form>
-					
+
 						<fieldset>
 							<div class="form-group col-sm-4">
-								<label for="settings-movement">Direction of movement <a href="#" data-popup="This is the direction that stripes will move across the screen">(?)</a></label>
-								<select class="form-control" id="settings-movement">
-									<option value="left-to-right">Left to right</option>
-									<option value="right-to-left">Right to left</option>
-									<option value="top-to-bottom">Top to bottom</option>
-									<option value="bottom-to-top">Bottom to top</option>
+								<label for="settings-direction">Rotation direction <a href="#" data-popup="This is the direction dots will rotate on the screen">(?)</a></label>
+								<select class="form-control" id="settings-direction">
+									<option value="clockwise">Clockwise</option>
+									<option value="counterclockwise">Counterclockwise</option>
 								</select>
 							</div>
 							<div class="form-group col-sm-4">
-								<label for="settings-stripes">Number of stripes <a href="#" data-popup="This is the total number of stripes that appear on the screen at any time">(?)</a></label>
-								<input type="text" class="form-control integers-only" id="settings-stripes" />
+								<label for="settings-items">Number of dots <a href="#" data-popup="This is the total number of dots that appear on the screen">(?)</a></label>
+								<input type="text" class="form-control integers-only" id="settings-items" />
 							</div>
 							<div class="form-group col-sm-4">
-								<label for="settings-speed">Speed (seconds across screen) <a href="#" data-popup="This is the number of seconds it takes a stripe to go from one side of the screen to the other">(?)</a></label>
+								<label for="settings-speed">Speed (seconds per full circle) <a href="#" data-popup="This is the number of seconds it takes a dot to travel in a complete circle around the center of the screen">(?)</a></label>
 								<input type="text" class="form-control integers-only" id="settings-speed" />
 							</div>
 						</fieldset>
 
 						<fieldset>
 							<div class="form-group col-sm-6">
-								<label for="settings-color-stripe">Stripe color <a href="#" data-popup="This is the color of each stripe">(?)</a></label>
-								<input type="text" class="form-control" id="settings-color-stripe" />
+								<label for="settings-item-size">Dot size <a href="#" data-popup="This is the size of the dots as a percent of the screen size">(?)</a></label>
+								<input type="text" class="form-control decimals-only" id="settings-item-size" />
 							</div>
 							<div class="form-group col-sm-6">
-								<label for="settings-color-background">Background color <a href="#" data-popup="This is the background color, under the stripes">(?)</a></label>
+								<label for="settings-screen-size">Screen size <a href="#" data-popup="This is percent of the available screen size that will be used to animate dots">(?)</a></label>
+								<input type="text" class="form-control decimals-only" id="settings-screen-size" />
+							</div>
+						</fieldset>
+
+						<fieldset>
+							<div class="form-group col-sm-6">
+								<label for="settings-color-foreground">Dot color <a href="#" data-popup="This is the color of each dot">(?)</a></label>
+								<input type="text" class="form-control" id="settings-color-foreground" />
+							</div>
+							<div class="form-group col-sm-6">
+								<label for="settings-color-background">Background color <a href="#" data-popup="This is the background color, under the dots">(?)</a></label>
 								<input type="text" class="form-control" id="settings-color-background" />
 							</div>
 						</fieldset>
@@ -190,7 +194,7 @@
 				<source src="lib/ogg-piano-sound/ogg/c2.ogg" type="audio/ogg">
 			</audio>
 		</div>
-		
+
 		<!-- scripts -->
 		<script src="js/jquery.min.js"></script>
 		<script src="lib/bootstrap/dist/js/bootstrap.min.js"></script>
