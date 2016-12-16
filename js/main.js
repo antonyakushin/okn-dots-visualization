@@ -135,7 +135,7 @@ $(document).ready(function() {
 		runtime.items = [];
 		var maxRadius = settings.computed.screenRadius - settings.computed.itemRadius;
 		var ratio = Math.PI * (3 - Math.sqrt(5));
-		for (var itemIndex = 1; itemIndex <= settings.items; itemIndex++) {
+		for (var itemIndex = 0; itemIndex < settings.items; itemIndex++) {
 			var theta = itemIndex * ratio;
 			var multiplier = Math.sqrt(itemIndex) / Math.sqrt(settings.items);
 			runtime.items.push({
