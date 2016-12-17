@@ -15,9 +15,9 @@ $(document).ready(function() {
 	var defaults = {
 		direction: 'clockwise',
 		items: 15,
-		speed: 20,
-		itemSize: 5.00,
-		screenSize: 100.00,
+		speed: 30,
+		itemSize: 5,
+		screenSize: 100,
 		foregroundColor: '#CCC',
 		backgroundColor: '#000',
 		metronome: 'off',
@@ -263,9 +263,6 @@ $(document).ready(function() {
 				case 'settings-items':
 					cleanVal = defaults.items;
 					break;
-				case 'settings-speed':
-					cleanVal = defaults.speed;
-					break;
 				case 'settings-stop-after':
 					cleanVal = defaults.stopAfter;
 					break;
@@ -291,6 +288,11 @@ $(document).ready(function() {
 		}
 		cleanVal = parseFloat(cleanVal);
 		switch ($this.attr('id')) {
+			case 'settings-speed':
+				if (cleanVal >= 360) {
+					cleanVal = 0;
+				}
+				break;
 			case 'settings-item-size':
 				if (cleanVal > 100) {
 					cleanVal = 100;
@@ -304,6 +306,9 @@ $(document).ready(function() {
 		}
 		if (!cleanVal) {
 			switch ($this.attr('id')) {
+				case 'settings-speed':
+					cleanVal = defaults.speed;
+					break;
 				case 'settings-item-size':
 					cleanVal = defaults.itemSize;
 					break;
@@ -360,7 +365,7 @@ $(document).ready(function() {
 				// draw central dot
 				context.fillStyle = settings.foregroundColor;
 				context.beginPath();
-				context.arc(0, 0, settings.computed.itemRadius * 2, 0, Math.PI * 2);
+				context.arc(0, 0, settings.computed.itemRadius * 1.5, 0, Math.PI * 2);
 				context.closePath();
 				context.fill();
 				// draw dots
@@ -416,7 +421,7 @@ $(document).ready(function() {
 		settings.computed.msPerFrame = (1000 / defaults.framesPerSecond);
 		settings.computed.itemRadius = (settings.canvasRadius() * settings.itemSize / 100);
 		settings.computed.screenRadius = (settings.canvasRadius() * settings.screenSize / 100);
-		settings.computed.rotationAnglePerFrame = (Math.PI * 2 * 2 / settings.speed / defaults.framesPerSecond);
+		settings.computed.rotationAnglePerFrame = (settings.speed * Math.PI / 180 * 2) / defaults.framesPerSecond;
 		settings.computed.noteSeconds = (1.0 / settings.frequency) / parseFloat(constants.notes);
 		settings.computed.scaleSeconds = (1.0 / settings.frequency);
 	}
