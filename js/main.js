@@ -8,7 +8,10 @@ $(document).ready(function() {
 			identifier: 'migraine',
 			expires: 30
 		},
+		speedAccelerationRate: 0.4,
+		speedDeccelerationRate: 0.2,
 		anglePrecision: 1000,
+		renderTextForSeconds: 3,
 		computed: {}
 	};
 	// defaults
@@ -52,6 +55,8 @@ $(document).ready(function() {
 		isDrawing: false,
 		isPlaying: false,
 		stopAfterHandle: null,
+		speedAcceleration: 0,
+		renderTextUntil: 0,
 		items: []
 	};
 
@@ -202,11 +207,27 @@ $(document).ready(function() {
 	// app panel
 	$('#app-panel').on('click', returnToSettings); // return to settings
 	// keypress
-	$(document).keyup(function(e) {
-		// check if app panel is visible
-		if ($('#app-panel').is(':visible')) {
-			// if yes, return to settings
-			returnToSettings();
+	$(document).on('keydown', function(e) {
+		// only when drawing
+		if (runtime.isDrawing) {
+			switch (e.keyCode) {
+				case 37:
+				case 39:
+					// left or right
+					var speedAccelerationMultiplier = (e.keyCode == 39 ? 1 : -1);
+					runtime.speedAcceleration += constants.speedAccelerationRate * speedAccelerationMultiplier;
+					// render text
+					runtime.renderTextUntil = Date.now() + constants.renderTextForSeconds * 1000;
+					break;
+				default:
+					// all other keys
+					// check if app panel is visible
+					if ($('#app-panel').is(':visible')) {
+						// if yes, return to settings
+						returnToSettings();
+					}
+					break;
+			}
 		}
 	});
 
@@ -307,7 +328,10 @@ $(document).ready(function() {
 		if (!cleanVal) {
 			switch ($this.attr('id')) {
 				case 'settings-speed':
-					cleanVal = defaults.speed;
+					// allow 0
+					if (cleanVal != 0) {
+						cleanVal = defaults.speed;
+					}
 					break;
 				case 'settings-item-size':
 					cleanVal = defaults.itemSize;
@@ -346,14 +370,28 @@ $(document).ready(function() {
 
 	// draw canvas frame
 	function drawCanvasFrame() {
+		// check for acceleration
+		if (runtime.speedAcceleration != 0) {
+			// update speed
+			settings.speed += runtime.speedAcceleration;
+			// deccelerate speed
+			var speedAccelerationMultiplier = (settings.speed <= 0 ? 1 : -1);
+			runtime.speedAcceleration += constants.speedDeccelerationRate * speedAccelerationMultiplier;
+			if (runtime.speedAcceleration < constants.speedDeccelerationRate || runtime.speedAcceleration > -constants.speedDeccelerationRate) {
+				runtime.speedAcceleration = 0;
+			}
+			// recompute settings
+			computeSettings();
+		}
 		// draw using framerate
+		var shouldAlwaysDraw = (settings.speed == 0);
 		var timeNow = Date.now();
 		runtime.timeSinceLastFrameDrawn = timeNow - runtime.timeLastFrameDrawn;
-		if (runtime.timeSinceLastFrameDrawn > settings.computed.msPerFrame) {
+		if (shouldAlwaysDraw || runtime.timeSinceLastFrameDrawn > settings.computed.msPerFrame) {
 			runtime.timeLastFrameDrawn = timeNow - (runtime.timeSinceLastFrameDrawn % settings.computed.msPerFrame);
 			// only draw if animation has moved
-			if (runtime.lastItemAngleRounded != runtime.itemAngleRounded) {
-				// stop drawing
+			if (shouldAlwaysDraw || runtime.lastItemAngleRounded != runtime.itemAngleRounded) {
+				// save context
 				context.save();
 				// draw background
 				context.fillStyle = settings.backgroundColor;
@@ -376,20 +414,32 @@ $(document).ready(function() {
 					context.closePath();
 					context.fill();
 				}
-				// resume drawing
+				// restore context
 				context.restore();
+				// render text if set
+				if (runtime.renderTextUntil >= timeNow) {
+					// save context
+					context.save();
+					// set origin to canvas center
+					context.translate(canvas.width / 2, canvas.height / 2);
+					// draw indicator text
+					context.fillStyle = settings.backgroundColor;
+					var fontSize = Math.round(settings.computed.itemRadius * 0.75);
+					context.font = fontSize + "px serif";
+					var indicatorText = (Math.round(settings.speed * 10) / 10) + '°/s';
+					var measureText = context.measureText(indicatorText);
+					context.fillText(indicatorText, -measureText.width / 2, fontSize * 0.25);
+					// restore context
+					context.restore();
+				}
 			}
 			// move
-			if (settings.computed.isDirectionClockwise) {
-				runtime.itemAngleActual += settings.computed.rotationAnglePerFrame;
-				if (runtime.itemAngleActual >= Math.PI * 2) {
-					runtime.itemAngleActual %= Math.PI * 2;
-				}
-			} else {
-				runtime.itemAngleActual -= settings.computed.rotationAnglePerFrame;
-				while (runtime.itemAngleActual < 0) {
-					runtime.itemAngleActual += Math.PI * 2;
-				}
+			runtime.itemAngleActual += settings.computed.rotationAnglePerFrame;
+			if (runtime.itemAngleActual >= Math.PI * 2) {
+				runtime.itemAngleActual %= Math.PI * 2;
+			}
+			while (runtime.itemAngleActual < 0) {
+				runtime.itemAngleActual += Math.PI * 2;
 			}
 			// update last
 			runtime.lastItemAngleRounded = runtime.itemAngleRounded;
@@ -421,7 +471,7 @@ $(document).ready(function() {
 		settings.computed.msPerFrame = (1000 / defaults.framesPerSecond);
 		settings.computed.itemRadius = (settings.canvasRadius() * settings.itemSize / 100);
 		settings.computed.screenRadius = (settings.canvasRadius() * settings.screenSize / 100);
-		settings.computed.rotationAnglePerFrame = (settings.speed * Math.PI / 180 * 2) / defaults.framesPerSecond;
+		settings.computed.rotationAnglePerFrame = (settings.speed * Math.PI / 180 * 2) / defaults.framesPerSecond * (settings.computed.isDirectionClockwise ? 1 : -1);
 		settings.computed.noteSeconds = (1.0 / settings.frequency) / parseFloat(constants.notes);
 		settings.computed.scaleSeconds = (1.0 / settings.frequency);
 	}
