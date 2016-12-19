@@ -8,6 +8,9 @@ $(document).ready(function() {
 			identifier: 'migraine',
 			expires: 30
 		},
+		maxEntropy: 20,
+		itemEntropyMaxAttempts: 100,
+		centerItemRadiusMultiplier: 1.5,
 		speedAccelerationRate: 0.4,
 		speedDeccelerationRate: 0.2,
 		anglePrecision: 1000,
@@ -136,17 +139,43 @@ $(document).ready(function() {
 		runtime.itemAngleActual = 0;
 		runtime.itemAngleRounded = 0;
 		runtime.lastItemAngleRounded = -1;
-		// determine item positions using Vogel's Approximation Method of Allocation
+		// generate item positions using Vogel's Approximation Method of Allocation with brute force entropy offsets
 		runtime.items = [];
 		var maxRadius = settings.computed.screenRadius - settings.computed.itemRadius;
 		var ratio = Math.PI * (3 - Math.sqrt(5));
 		for (var itemIndex = 1; itemIndex < settings.items; itemIndex++) {
 			var theta = itemIndex * ratio;
-			var multiplier = Math.sqrt(itemIndex) / Math.sqrt(settings.items);
-			runtime.items.push({
-				x: multiplier * Math.cos(theta) * maxRadius,
-				y: multiplier * Math.sin(theta) * maxRadius
-			});
+			var radiusRatio = Math.sqrt(itemIndex) / Math.sqrt(settings.items);
+			var maxItemEntropy = constants.maxEntropy * 0.5 + constants.maxEntropy * Math.sqrt(1 - radiusRatio); // vary 50% of the max entropy in the calculation when item is close to center
+			for (var numberOfAttempts = 1; numberOfAttempts <= constants.itemEntropyMaxAttempts; numberOfAttempts++) {
+				// compute entropy
+				var entropyX = -maxItemEntropy / 2 + Math.random() * maxItemEntropy;
+				var entropyY = -maxItemEntropy / 2 + Math.random() * maxItemEntropy;
+				// compute potential coordinates
+				var x = Math.cos(theta) * radiusRatio * (maxRadius - constants.maxEntropy) + entropyX;
+				var y = Math.sin(theta) * radiusRatio * (maxRadius - constants.maxEntropy) + entropyY;
+				// check whether item overlaps with existing items
+				var doCirclesOverlap = false;
+				for (var existingItemIndex = 0; existingItemIndex < runtime.items.length; existingItemIndex++) {
+					var existingItem = runtime.items[existingItemIndex];
+					if (Math.sqrt(Math.pow(existingItem.x - x, 2) + Math.pow(existingItem.y - y, 2)) <= settings.computed.itemRadius * 2 + 1) { // try to account for a space of 1
+						doCirclesOverlap = true;
+						break;
+					}
+				}
+				// check for overlap with center item
+				if (!doCirclesOverlap && Math.sqrt(Math.pow(x, 2) + Math.pow(y, 2)) <= maxRadius * constants.centerItemRadiusMultiplier) {
+					doCirclesOverlap = true;
+				}
+				if (!doCirclesOverlap || numberOfAttempts == constants.itemEntropyMaxAttempts) {
+					// if no or max attempts reached, add item and exit
+					runtime.items.push({
+						x: x,
+						y: y
+					});
+					break;
+				}
+			}
 		}
 		// enable metronome if on
 		if (settings.metronome) {
@@ -400,10 +429,10 @@ $(document).ready(function() {
 				context.translate(canvas.width / 2, canvas.height / 2);
 				// rotate around canvas center
 				context.rotate(runtime.lastItemAngleRounded);
-				// draw central dot
+				// draw center item
 				context.fillStyle = settings.foregroundColor;
 				context.beginPath();
-				context.arc(0, 0, settings.computed.itemRadius * 1.5, 0, Math.PI * 2);
+				context.arc(0, 0, settings.computed.itemRadius * constants.centerItemRadiusMultiplier, 0, Math.PI * 2);
 				context.closePath();
 				context.fill();
 				// draw dots
@@ -469,8 +498,8 @@ $(document).ready(function() {
 		settings.computed = {};
 		settings.computed.isDirectionClockwise = (settings.direction == 'clockwise');
 		settings.computed.msPerFrame = (1000 / defaults.framesPerSecond);
-		settings.computed.itemRadius = (settings.canvasRadius() * settings.itemSize / 100);
 		settings.computed.screenRadius = (settings.canvasRadius() * settings.screenSize / 100);
+		settings.computed.itemRadius = (settings.computed.screenRadius * settings.itemSize / 100);
 		settings.computed.rotationAnglePerFrame = (settings.speed * Math.PI / 180 * 2) / defaults.framesPerSecond * (settings.computed.isDirectionClockwise ? 1 : -1);
 		settings.computed.noteSeconds = (1.0 / settings.frequency) / parseFloat(constants.notes);
 		settings.computed.scaleSeconds = (1.0 / settings.frequency);
