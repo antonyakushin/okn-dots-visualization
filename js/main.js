@@ -9,14 +9,16 @@ $(document).ready(function() {
 			identifier: 'migraine',
 			expires: 30
 		},
-		percentOfEntropyStrength: 0.5,
-		maxEntropyMultiplier: 3,
+		itemCalculationScreenRadius: 1000,
+		itemPercentOfEntropyStrength: 0.5,
+		itemMaxEntropyMultiplier: 3,
 		itemEntropyMaxAttempts: 100,
-		spaceMultiplier: 0.01,
+		itemSpaceMultiplier: 0.01,
 		centerItemRadiusMultiplier: 1.5,
 		speedChange: 0.5,
 		screenSizeChange: 0.5,
 		renderTextForSeconds: 3,
+		renderTextSpace: 10,
 		minFontSize: 20,
 		anglePrecisionSignificantDigits: 3,
 		computed: {}
@@ -143,15 +145,15 @@ $(document).ready(function() {
 		runtime.lastItemAngleRounded = -1;
 		// generate item positions using Vogel's Approximation Method of Allocation with brute force entropy offsets, assuming a max size
 		runtime.items = [];
-		var radiusOfMaxSizeItem = settings.canvasRadius() * (settings.itemSize / 100);
-		var radiusOfMaxSize = settings.canvasRadius() - radiusOfMaxSizeItem;
-		var spaceOfMaxSize = Math.max(settings.canvasRadius() * constants.spaceMultiplier, 1);
+		var radiusOfMaxSizeItem = constants.itemCalculationScreenRadius * (settings.itemSize / 100);
+		var radiusOfMaxSize = constants.itemCalculationScreenRadius - radiusOfMaxSizeItem;
+		var spaceOfMaxSize = Math.max(constants.itemCalculationScreenRadius * constants.itemSpaceMultiplier, 1);
 		var ratio = Math.PI * (3 - Math.sqrt(5));
 		for (var itemIndex = 1; itemIndex < settings.items; itemIndex++) {
 			var theta = itemIndex * ratio;
 			var radiusRatio = Math.sqrt(itemIndex) / Math.sqrt(settings.items);
-			var maxItemEntropyForCalculation = radiusOfMaxSizeItem * constants.maxEntropyMultiplier;
-			var maxItemEntropy = maxItemEntropyForCalculation * constants.percentOfEntropyStrength + maxItemEntropyForCalculation * (1 - constants.percentOfEntropyStrength) * Math.sqrt(1 - radiusRatio); // vary the max entropy in the calculation when item is close to center based on entropy strength percent
+			var maxItemEntropyForCalculation = radiusOfMaxSizeItem * constants.itemMaxEntropyMultiplier;
+			var maxItemEntropy = maxItemEntropyForCalculation * constants.itemPercentOfEntropyStrength + maxItemEntropyForCalculation * (1 - constants.itemPercentOfEntropyStrength) * Math.sqrt(1 - radiusRatio); // vary the max entropy in the calculation when item is close to center based on entropy strength percent
 			for (var numberOfAttempts = 1; numberOfAttempts <= constants.itemEntropyMaxAttempts; numberOfAttempts++) {
 				// require that item does not overlap with center item
 				var doesItemOverlapWithCenterItem = true;
@@ -310,7 +312,7 @@ $(document).ready(function() {
 			hasChanged = true;
 			canvas.setAttribute('height', parseInt(windowHeight));
 		}
-		// clear computed settings on change
+		// update computed settings on change
 		if (hasChanged) {
 			computeSettings();
 		}
@@ -469,7 +471,7 @@ $(document).ready(function() {
 				for (var itemIndex = 0; itemIndex < runtime.items.length; itemIndex++) {
 					var item = runtime.items[itemIndex];
 					context.beginPath();
-					context.arc(item.x * settings.screenSize / 100, item.y * settings.screenSize / 100, settings.computed.itemRadius, 0, Math.PI * 2);
+					context.arc(item.x / constants.itemCalculationScreenRadius * settings.canvasRadius() * settings.screenSize / 100, item.y / constants.itemCalculationScreenRadius * settings.canvasRadius() * settings.screenSize / 100, settings.computed.itemRadius, 0, Math.PI * 2);
 					context.closePath();
 					context.fill();
 				}
@@ -492,18 +494,18 @@ $(document).ready(function() {
 					// draw speed text
 					context.strokeStyle = settings.backgroundColor;
 					context.lineWidth = 1;
-					context.strokeText(indicatorText, -measureText.width, -fontSize * 0.25);
+					context.strokeText(indicatorText, -measureText.width - constants.renderTextSpace, -fontSize * 0.25 - constants.renderTextSpace);
 					context.fillStyle = settings.foregroundColor;
-					context.fillText(indicatorText, -measureText.width, -fontSize * 0.25);
+					context.fillText(indicatorText, -measureText.width - constants.renderTextSpace, -fontSize * 0.25 - constants.renderTextSpace);
 					// set size text
 					indicatorText = 'Size: ' + settings.screenSize + '%';
 					measureText = context.measureText(indicatorText);
 					// draw size text
 					context.strokeStyle = settings.backgroundColor;
 					context.lineWidth = 1;
-					context.strokeText(indicatorText, -measureText.width, -fontSize * 1.25);
+					context.strokeText(indicatorText, -measureText.width - constants.renderTextSpace, -fontSize * 1.25 - constants.renderTextSpace);
 					context.fillStyle = settings.foregroundColor;
-					context.fillText(indicatorText, -measureText.width, -fontSize * 1.25);
+					context.fillText(indicatorText, -measureText.width - constants.renderTextSpace, -fontSize * 1.25 - constants.renderTextSpace);
 					// restore context
 					context.restore();
 				}
