@@ -149,7 +149,7 @@ $(document).ready(function() {
 			var theta = itemIndex * ratio;
 			var radiusRatio = Math.sqrt(itemIndex) / Math.sqrt(settings.items);
 			var maxItemEntropyForCalculation = radiusOfMaxSizeItem * constants.maxEntropyMultiplier;
-			var maxItemEntropy = maxItemEntropyForCalculation * 0.5 + maxItemEntropyForCalculation * Math.sqrt(1 - radiusRatio) * 0.5; // vary 50% of the max entropy in the calculation when item is close to center
+			var maxItemEntropy = maxItemEntropyForCalculation * 1 + maxItemEntropyForCalculation * 0 * Math.sqrt(1 - radiusRatio); // vary 50% of the max entropy in the calculation when item is close to center
 			for (var numberOfAttempts = 1; numberOfAttempts <= constants.itemEntropyMaxAttempts; numberOfAttempts++) {
 				// require that item does not overlap with center item
 				var doesItemOverlapWithCenterItem = true;
@@ -319,6 +319,13 @@ $(document).ready(function() {
 		var $this = $(this);
 		var cleanVal = $this.val().replace(/[^0-9]/g, '');
 		cleanVal = parseInt(cleanVal);
+		switch ($this.attr('id')) {
+			case 'settings-items':
+				if (cleanVal > 1000) {
+					cleanVal = 1000;
+				}
+				break;
+		}
 		if (!cleanVal) {
 			switch ($this.attr('id')) {
 				case 'settings-direction':
