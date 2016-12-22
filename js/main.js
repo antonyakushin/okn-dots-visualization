@@ -478,8 +478,8 @@ $(document).ready(function() {
 			if (runtime.itemAngleActual >= Math.PI * 2) {
 				runtime.itemAngleActual %= Math.PI * 2;
 			}
-			while (runtime.itemAngleActual < 0) {
-				runtime.itemAngleActual += Math.PI * 2;
+			if (runtime.itemAngleActual <= 0) {
+				runtime.itemAngleActual %= -Math.PI * 2;
 			}
 			// update last
 			runtime.lastItemAngleRounded = runtime.itemAngleRounded;
