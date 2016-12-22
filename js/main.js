@@ -404,6 +404,12 @@ $(document).ready(function() {
 		if (runtime.speedAcceleration != 0) {
 			// update speed
 			settings.speed += runtime.speedAcceleration;
+			if (settings.speed >= 360) {
+				settings.speed = 360;
+			}
+			else if (settings.speed < -360) {
+				settings.speed = -360;
+			}
 			// deccelerate speed
 			var speedAccelerationMultiplier = (settings.speed <= 0 ? 1 : -1);
 			runtime.speedAcceleration += constants.speedDeccelerationRate * speedAccelerationMultiplier;
