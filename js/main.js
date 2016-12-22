@@ -9,6 +9,7 @@ $(document).ready(function() {
 			identifier: 'migraine',
 			expires: 30
 		},
+		percentOfEntropyStrength: 0.5,
 		maxEntropyMultiplier: 3,
 		itemEntropyMaxAttempts: 100,
 		spaceMultiplier: 0.01,
@@ -149,7 +150,7 @@ $(document).ready(function() {
 			var theta = itemIndex * ratio;
 			var radiusRatio = Math.sqrt(itemIndex) / Math.sqrt(settings.items);
 			var maxItemEntropyForCalculation = radiusOfMaxSizeItem * constants.maxEntropyMultiplier;
-			var maxItemEntropy = maxItemEntropyForCalculation * 1 + maxItemEntropyForCalculation * 0 * Math.sqrt(1 - radiusRatio); // vary 50% of the max entropy in the calculation when item is close to center
+			var maxItemEntropy = maxItemEntropyForCalculation * constants.percentOfEntropyStrength + maxItemEntropyForCalculation * (1 - constants.percentOfEntropyStrength) * Math.sqrt(1 - radiusRatio); // vary the max entropy in the calculation when item is close to center based on entropy strength percent
 			for (var numberOfAttempts = 1; numberOfAttempts <= constants.itemEntropyMaxAttempts; numberOfAttempts++) {
 				// require that item does not overlap with center item
 				var doesItemOverlapWithCenterItem = true;
