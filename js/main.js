@@ -11,11 +11,10 @@ $(document).ready(function() {
 		maxEntropy: 20,
 		itemEntropyMaxAttempts: 100,
 		centerItemRadiusMultiplier: 1.5,
-		speedAccelerationRate: 0.4,
-		speedDeccelerationRate: 0.2,
-		anglePrecision: 1000,
+		speedChange: 0.2,
 		renderTextForSeconds: 3,
 		minFontSize: 20,
+		anglePrecisionSignificantDigits: 3,
 		computed: {}
 	};
 	// defaults
@@ -48,6 +47,7 @@ $(document).ready(function() {
 	};
 	// runtime/state variables
 	var runtime = {
+		anglePrecisionRoundingMultiplier: 0,
 		timeLastFrameDrawn: null,
 		timeSinceLastFrameDrawn: null,
 		itemAngleActual: 0,
@@ -59,7 +59,6 @@ $(document).ready(function() {
 		isDrawing: false,
 		isPlaying: false,
 		stopAfterHandle: null,
-		speedAcceleration: 0,
 		renderTextUntil: 0,
 		items: []
 	};
@@ -137,6 +136,7 @@ $(document).ready(function() {
 		// compute settings
 		computeSettings();
 		// apply settings
+		runtime.anglePrecisionRoundingMultiplier = Math.pow(10, constants.anglePrecisionSignificantDigits);
 		runtime.itemAngleActual = 0;
 		runtime.itemAngleRounded = 0;
 		runtime.lastItemAngleRounded = -1;
@@ -244,8 +244,17 @@ $(document).ready(function() {
 				case 37:
 				case 39:
 					// left or right
-					var speedAccelerationMultiplier = (e.keyCode == 39 ? 1 : -1);
-					runtime.speedAcceleration += constants.speedAccelerationRate * speedAccelerationMultiplier;
+					var multiplier = (e.keyCode == 39 ? 1 : -1);
+					// update speed
+					settings.speed += constants.speedChange * multiplier;
+					if (settings.speed >= 360) {
+						settings.speed = 360;
+					}
+					else if (settings.speed < -360) {
+						settings.speed = -360;
+					}
+					// recompute settings
+					computeSettings();
 					// render text
 					runtime.renderTextUntil = Date.now() + constants.renderTextForSeconds * 1000;
 					break;
@@ -400,27 +409,8 @@ $(document).ready(function() {
 
 	// draw canvas frame
 	function drawCanvasFrame() {
-		// check for acceleration
-		if (runtime.speedAcceleration != 0) {
-			// update speed
-			settings.speed += runtime.speedAcceleration;
-			if (settings.speed >= 360) {
-				settings.speed = 360;
-			}
-			else if (settings.speed < -360) {
-				settings.speed = -360;
-			}
-			// deccelerate speed
-			var speedAccelerationMultiplier = (settings.speed <= 0 ? 1 : -1);
-			runtime.speedAcceleration += constants.speedDeccelerationRate * speedAccelerationMultiplier;
-			if (runtime.speedAcceleration < constants.speedDeccelerationRate || runtime.speedAcceleration > -constants.speedDeccelerationRate) {
-				runtime.speedAcceleration = 0;
-			}
-			// recompute settings
-			computeSettings();
-		}
 		// draw using framerate
-		var shouldAlwaysDraw = (settings.speed == 0);
+		var shouldAlwaysDraw = (Math.round(settings.computed.rotationAnglePerFrame * runtime.anglePrecisionRoundingMultiplier) == 0);
 		var timeNow = Date.now();
 		runtime.timeSinceLastFrameDrawn = timeNow - runtime.timeLastFrameDrawn;
 		if (shouldAlwaysDraw || runtime.timeSinceLastFrameDrawn > settings.computed.msPerFrame) {
@@ -484,7 +474,7 @@ $(document).ready(function() {
 			// update last
 			runtime.lastItemAngleRounded = runtime.itemAngleRounded;
 			// round
-			runtime.itemAngleRounded = Math.round(runtime.itemAngleActual * constants.anglePrecision) / constants.anglePrecision;
+			runtime.itemAngleRounded = Math.round(runtime.itemAngleActual * runtime.anglePrecisionRoundingMultiplier) / runtime.anglePrecisionRoundingMultiplier;
 		}
 		// continue to next animation frame if drawing
 		if (runtime.isDrawing) {
@@ -511,7 +501,7 @@ $(document).ready(function() {
 		settings.computed.msPerFrame = (1000 / defaults.framesPerSecond);
 		settings.computed.screenRadius = (settings.canvasRadius() * settings.screenSize / 100);
 		settings.computed.itemRadius = (settings.computed.screenRadius * settings.itemSize / 100);
-		settings.computed.rotationAnglePerFrame = (settings.speed * Math.PI / 180 * 2) / defaults.framesPerSecond * (settings.computed.isDirectionClockwise ? 1 : -1);
+		settings.computed.rotationAnglePerFrame = Math.round((settings.speed * Math.PI / 180 * 2) / defaults.framesPerSecond * (settings.computed.isDirectionClockwise ? 1 : -1) * Math.pow(runtime.anglePrecisionRoundingMultiplier, 2)) / Math.pow(runtime.anglePrecisionRoundingMultiplier, 2);
 		settings.computed.noteSeconds = (1.0 / settings.frequency) / parseFloat(constants.notes);
 		settings.computed.scaleSeconds = (1.0 / settings.frequency);
 	}
