@@ -3,13 +3,15 @@ $(document).ready(function() {
 
 	// constants
 	var constants = {
+		framesPerSecond: 120,
 		notes: 14,
 		cookieOptions: {
 			identifier: 'migraine',
 			expires: 30
 		},
-		maxEntropy: 20,
+		maxEntropyMultiplier: 3,
 		itemEntropyMaxAttempts: 100,
+		spaceMultiplier: 0.01,
 		centerItemRadiusMultiplier: 1.5,
 		speedChange: 0.2,
 		renderTextForSeconds: 3,
@@ -29,8 +31,7 @@ $(document).ready(function() {
 		metronome: 'off',
 		frequency: 0.05,
 		stopAfter: '',
-		fullscreen: 'on',
-		framesPerSecond: 120
+		fullscreen: 'on'
 	};
 	// settings
 	var settings = {
@@ -47,7 +48,6 @@ $(document).ready(function() {
 	};
 	// runtime/state variables
 	var runtime = {
-		anglePrecisionRoundingMultiplier: 0,
 		timeLastFrameDrawn: null,
 		timeSinceLastFrameDrawn: null,
 		itemAngleActual: 0,
@@ -136,39 +136,43 @@ $(document).ready(function() {
 		// compute settings
 		computeSettings();
 		// apply settings
-		runtime.anglePrecisionRoundingMultiplier = Math.pow(10, constants.anglePrecisionSignificantDigits);
 		runtime.itemAngleActual = 0;
 		runtime.itemAngleRounded = 0;
 		runtime.lastItemAngleRounded = -1;
-		// generate item positions using Vogel's Approximation Method of Allocation with brute force entropy offsets
+		// generate item positions using Vogel's Approximation Method of Allocation with brute force entropy offsets, assuming a max size
 		runtime.items = [];
-		var maxRadius = settings.computed.screenRadius - settings.computed.itemRadius;
+		var radiusOfMaxSizeItem = settings.canvasRadius() * (settings.itemSize / 100);
+		var radiusOfMaxSize = settings.canvasRadius() - radiusOfMaxSizeItem;
+		var spaceOfMaxSize = Math.max(settings.canvasRadius() * constants.spaceMultiplier, 1);
 		var ratio = Math.PI * (3 - Math.sqrt(5));
 		for (var itemIndex = 1; itemIndex < settings.items; itemIndex++) {
 			var theta = itemIndex * ratio;
 			var radiusRatio = Math.sqrt(itemIndex) / Math.sqrt(settings.items);
-			var maxItemEntropy = constants.maxEntropy * 0.5 + constants.maxEntropy * Math.sqrt(1 - radiusRatio); // vary 50% of the max entropy in the calculation when item is close to center
+			var maxItemEntropyForCalculation = radiusOfMaxSizeItem * constants.maxEntropyMultiplier;
+			var maxItemEntropy = maxItemEntropyForCalculation * 0.5 + maxItemEntropyForCalculation * Math.sqrt(1 - radiusRatio) * 0.5; // vary 50% of the max entropy in the calculation when item is close to center
 			for (var numberOfAttempts = 1; numberOfAttempts <= constants.itemEntropyMaxAttempts; numberOfAttempts++) {
-				// compute entropy
-				var entropyX = -maxItemEntropy / 2 + Math.random() * maxItemEntropy;
-				var entropyY = -maxItemEntropy / 2 + Math.random() * maxItemEntropy;
-				// compute potential coordinates
-				var x = Math.cos(theta) * radiusRatio * (maxRadius - constants.maxEntropy) + entropyX;
-				var y = Math.sin(theta) * radiusRatio * (maxRadius - constants.maxEntropy) + entropyY;
-				// check whether item overlaps with existing items
-				var doCirclesOverlap = false;
+				// require that item does not overlap with center item
+				var doesItemOverlapWithCenterItem = true;
+				while (doesItemOverlapWithCenterItem) {
+					// compute entropy
+					var entropyX = -maxItemEntropy / 2 + Math.random() * maxItemEntropy;
+					var entropyY = -maxItemEntropy / 2 + Math.random() * maxItemEntropy;
+					// compute potential coordinates
+					var x = Math.cos(theta) * radiusRatio * (radiusOfMaxSize - maxItemEntropyForCalculation) + entropyX;
+					var y = Math.sin(theta) * radiusRatio * (radiusOfMaxSize - maxItemEntropyForCalculation) + entropyY;
+					// update overlap with center item
+					doesItemOverlapWithCenterItem = (Math.sqrt(Math.pow(x, 2) + Math.pow(y, 2)) <= radiusOfMaxSizeItem * constants.centerItemRadiusMultiplier + radiusOfMaxSizeItem + spaceOfMaxSize);
+				}
+				// check whether item overlaps with other items
+				var doesItemOverlapWithOtherItems = false;
 				for (var existingItemIndex = 0; existingItemIndex < runtime.items.length; existingItemIndex++) {
 					var existingItem = runtime.items[existingItemIndex];
-					if (Math.sqrt(Math.pow(existingItem.x - x, 2) + Math.pow(existingItem.y - y, 2)) <= settings.computed.itemRadius * 2 + 1) { // try to account for a space of 1
-						doCirclesOverlap = true;
+					if (Math.sqrt(Math.pow(existingItem.x - x, 2) + Math.pow(existingItem.y - y, 2)) <= radiusOfMaxSizeItem * 2 + spaceOfMaxSize) {
+						doesItemOverlapWithOtherItems = true;
 						break;
 					}
 				}
-				// check for overlap with center item
-				if (!doCirclesOverlap && Math.sqrt(Math.pow(x, 2) + Math.pow(y, 2)) <= maxRadius * constants.centerItemRadiusMultiplier) {
-					doCirclesOverlap = true;
-				}
-				if (!doCirclesOverlap || numberOfAttempts == constants.itemEntropyMaxAttempts) {
+				if (!doesItemOverlapWithOtherItems || numberOfAttempts == constants.itemEntropyMaxAttempts) {
 					// if no or max attempts reached, add item and exit
 					runtime.items.push({
 						x: x,
@@ -219,7 +223,7 @@ $(document).ready(function() {
 		scrollToTop();
 		// start first animation frame
 		runtime.isDrawing = true;
-		window.requestAnimationFrame(drawCanvasFrame);
+		window.requestAnimationFrame(draw);
 		// play first note if metronome is on
 		if (settings.metronome) {
 			playNextNote();
@@ -408,9 +412,9 @@ $(document).ready(function() {
 	});
 
 	// draw canvas frame
-	function drawCanvasFrame() {
+	function draw() {
 		// draw using framerate
-		var shouldAlwaysDraw = (Math.round(settings.computed.rotationAnglePerFrame * runtime.anglePrecisionRoundingMultiplier) == 0);
+		var shouldAlwaysDraw = (Math.round(settings.computed.rotationAnglePerFrame * settings.computed.anglePrecisionRoundingMultiplier) == 0);
 		var timeNow = Date.now();
 		runtime.timeSinceLastFrameDrawn = timeNow - runtime.timeLastFrameDrawn;
 		if (shouldAlwaysDraw || runtime.timeSinceLastFrameDrawn > settings.computed.msPerFrame) {
@@ -436,7 +440,7 @@ $(document).ready(function() {
 				for (var itemIndex = 0; itemIndex < runtime.items.length; itemIndex++) {
 					var item = runtime.items[itemIndex];
 					context.beginPath();
-					context.arc(item.x, item.y, settings.computed.itemRadius, 0, Math.PI * 2);
+					context.arc(item.x * settings.screenSize / 100, item.y * settings.screenSize / 100, settings.computed.itemRadius, 0, Math.PI * 2);
 					context.closePath();
 					context.fill();
 				}
@@ -474,11 +478,11 @@ $(document).ready(function() {
 			// update last
 			runtime.lastItemAngleRounded = runtime.itemAngleRounded;
 			// round
-			runtime.itemAngleRounded = Math.round(runtime.itemAngleActual * runtime.anglePrecisionRoundingMultiplier) / runtime.anglePrecisionRoundingMultiplier;
+			runtime.itemAngleRounded = Math.round(runtime.itemAngleActual * settings.computed.anglePrecisionRoundingMultiplier) / settings.computed.anglePrecisionRoundingMultiplier;
 		}
 		// continue to next animation frame if drawing
 		if (runtime.isDrawing) {
-			window.requestAnimationFrame(drawCanvasFrame);
+			window.requestAnimationFrame(draw);
 		}
 	}
 
@@ -498,10 +502,11 @@ $(document).ready(function() {
 	function computeSettings() {
 		settings.computed = {};
 		settings.computed.isDirectionClockwise = (settings.direction == 'clockwise');
-		settings.computed.msPerFrame = (1000 / defaults.framesPerSecond);
+		settings.computed.msPerFrame = (1000 / constants.framesPerSecond);
 		settings.computed.screenRadius = (settings.canvasRadius() * settings.screenSize / 100);
 		settings.computed.itemRadius = (settings.computed.screenRadius * settings.itemSize / 100);
-		settings.computed.rotationAnglePerFrame = Math.round((settings.speed * Math.PI / 180 * 2) / defaults.framesPerSecond * (settings.computed.isDirectionClockwise ? 1 : -1) * Math.pow(runtime.anglePrecisionRoundingMultiplier, 2)) / Math.pow(runtime.anglePrecisionRoundingMultiplier, 2);
+		settings.computed.anglePrecisionRoundingMultiplier = Math.pow(10, constants.anglePrecisionSignificantDigits);
+		settings.computed.rotationAnglePerFrame = Math.round((settings.speed * Math.PI / 180 * 2) / constants.framesPerSecond * (settings.computed.isDirectionClockwise ? 1 : -1) * Math.pow(settings.computed.anglePrecisionRoundingMultiplier, 2)) / Math.pow(settings.computed.anglePrecisionRoundingMultiplier, 2);
 		settings.computed.noteSeconds = (1.0 / settings.frequency) / parseFloat(constants.notes);
 		settings.computed.scaleSeconds = (1.0 / settings.frequency);
 	}
