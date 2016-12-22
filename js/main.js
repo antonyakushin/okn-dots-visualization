@@ -15,6 +15,7 @@ $(document).ready(function() {
 		speedDeccelerationRate: 0.2,
 		anglePrecision: 1000,
 		renderTextForSeconds: 3,
+		minFontSize: 20,
 		computed: {}
 	};
 	// defaults
@@ -449,15 +450,19 @@ $(document).ready(function() {
 				if (runtime.renderTextUntil >= timeNow) {
 					// save context
 					context.save();
-					// set origin to canvas center
-					context.translate(canvas.width / 2, canvas.height / 2);
-					// draw indicator text
-					context.fillStyle = settings.backgroundColor;
-					var fontSize = Math.round(settings.computed.itemRadius * 0.75);
+					// set origin to canvas corner
+					context.translate(canvas.width, canvas.height);
+					// set indicator text
+					var fontSize = Math.max(Math.round(settings.computed.itemRadius * 0.75), constants.minFontSize);
 					context.font = fontSize + "px serif";
-					var indicatorText = (Math.round(settings.speed * 10) / 10) + '°/s';
+					var indicatorText = 'Speed: ' + (Math.round(settings.speed * 10) / 10) + '°/s';
 					var measureText = context.measureText(indicatorText);
-					context.fillText(indicatorText, -measureText.width / 2, fontSize * 0.25);
+					// draw indicator text
+					context.strokeStyle = settings.backgroundColor;
+					context.lineWidth = 1;
+					context.strokeText(indicatorText, -measureText.width, -fontSize * 0.25);
+					context.fillStyle = settings.foregroundColor;
+					context.fillText(indicatorText, -measureText.width, -fontSize * 0.25);
 					// restore context
 					context.restore();
 				}
