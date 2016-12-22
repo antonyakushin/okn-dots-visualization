@@ -14,7 +14,8 @@ $(document).ready(function() {
 		itemEntropyMaxAttempts: 100,
 		spaceMultiplier: 0.01,
 		centerItemRadiusMultiplier: 1.5,
-		speedChange: 0.2,
+		speedChange: 0.5,
+		screenSizeChange: 0.5,
 		renderTextForSeconds: 3,
 		minFontSize: 20,
 		anglePrecisionSignificantDigits: 3,
@@ -263,6 +264,23 @@ $(document).ready(function() {
 					// render text
 					runtime.renderTextUntil = Date.now() + constants.renderTextForSeconds * 1000;
 					break;
+				case 38:
+				case 40:
+					// up or down
+					var multiplier = (e.keyCode == 38 ? 1 : -1);
+					// update size
+					settings.screenSize += constants.screenSizeChange * multiplier;
+					if (settings.screenSize >= 100) {
+						settings.screenSize = 100;
+					}
+					else if (settings.screenSize < 0.1) {
+						settings.screenSize = 0.1;
+					}
+					// recompute settings
+					computeSettings();
+					// render text
+					runtime.renderTextUntil = Date.now() + constants.renderTextForSeconds * 1000;
+					break;
 				default:
 					// all other keys
 					// check if app panel is visible
@@ -374,6 +392,9 @@ $(document).ready(function() {
 				if (cleanVal > 100) {
 					cleanVal = 100;
 				}
+				else if (cleanVal < 0.1 && cleanVal != 0) {
+					cleanVal = 0.1;
+				}
 				break;
 		}
 		if (!cleanVal) {
@@ -460,17 +481,29 @@ $(document).ready(function() {
 					context.save();
 					// set origin to canvas corner
 					context.translate(canvas.width, canvas.height);
-					// set indicator text
+					// set font and size
 					var fontSize = Math.max(Math.round(settings.computed.itemRadius * 0.75), constants.minFontSize);
 					context.font = fontSize + "px serif";
-					var indicatorText = 'Speed: ' + (Math.round(settings.speed * 10) / 10) + '°/s';
-					var measureText = context.measureText(indicatorText);
-					// draw indicator text
+					var indicatorText;
+					var measureText;
+					// set speed text
+					indicatorText = 'Speed: ' + (Math.round(settings.speed * 10) / 10) + '°/s';
+					measureText = context.measureText(indicatorText);
+					// draw speed text
 					context.strokeStyle = settings.backgroundColor;
 					context.lineWidth = 1;
 					context.strokeText(indicatorText, -measureText.width, -fontSize * 0.25);
 					context.fillStyle = settings.foregroundColor;
 					context.fillText(indicatorText, -measureText.width, -fontSize * 0.25);
+					// set size text
+					indicatorText = 'Size: ' + settings.screenSize + '%';
+					measureText = context.measureText(indicatorText);
+					// draw size text
+					context.strokeStyle = settings.backgroundColor;
+					context.lineWidth = 1;
+					context.strokeText(indicatorText, -measureText.width, -fontSize * 1.25);
+					context.fillStyle = settings.foregroundColor;
+					context.fillText(indicatorText, -measureText.width, -fontSize * 1.25);
 					// restore context
 					context.restore();
 				}
