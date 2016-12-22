@@ -71,13 +71,17 @@
 						</fieldset>
 
 						<fieldset>
-							<div class="form-group col-sm-3">
+							<div class="form-group col-sm-2">
 								<label for="settings-item-size">Dot size <a href="#" data-popup="This is the size of the dots as a percent of the screen size">(?)</a></label>
 								<input type="text" class="form-control decimals-only" id="settings-item-size" />
 							</div>
-							<div class="form-group col-sm-3">
+							<div class="form-group col-sm-2">
 								<label for="settings-screen-size">Screen size <a href="#" data-popup="This is percent of the available screen size that will be used to animate dots">(?)</a></label>
 								<input type="text" class="form-control decimals-only" id="settings-screen-size" />
+							</div>
+							<div class="form-group col-sm-2">
+								<label for="settings-screen-position">Screen position <a href="#" data-popup="This is a percent of the available screen size that represents how far up or down the screen is positioned from the center">(?)</a></label>
+								<input type="text" class="form-control decimals-only" id="settings-screen-position" />
 							</div>
 							<div class="form-group col-sm-3">
 								<label for="settings-color-foreground">Dot color <a href="#" data-popup="This is the color of each dot">(?)</a></label>
@@ -121,13 +125,15 @@
 					</form>
 					
 					<h1>Usage</h1>
-					<p>To exit the application and return to the settings, click anywhere on the screen or press any key (except arrow keys).</p>
-					<p>Use the arrow keys to change motion:</p>
+					<p>To exit the application and return to the settings, click anywhere on the screen or press any key (except the keys described below).</p>
+					<p>Use the following keys to change settings while the application is running:</p>
 					<ul>
 						<li>LEFT slows down rotation</li>
 						<li>RIGHT speeds up rotation</li>
 						<li>UP increases the screen size</li>
 						<li>DOWN decreases the screen size</li>
+						<li>Q moves the screen up</li>
+						<li>A moves the screen down</li>
 					</ul>
 
 					<button class="btn btn-primary btn-lg" id="settings-run-button">Start Web Application</button>

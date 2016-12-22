@@ -17,6 +17,7 @@ $(document).ready(function() {
 		centerItemRadiusMultiplier: 1.5,
 		speedChange: 0.5,
 		screenSizeChange: 0.5,
+		screenPositionChange: 0.25,
 		renderTextForSeconds: 3,
 		renderTextSpace: 10,
 		minFontSize: 20,
@@ -30,6 +31,7 @@ $(document).ready(function() {
 		speed: 30,
 		itemSize: 2,
 		screenSize: 100,
+		screenPosition: 0,
 		foregroundColor: '#CCC',
 		backgroundColor: '#000',
 		metronome: 'off',
@@ -129,6 +131,7 @@ $(document).ready(function() {
 		settings.speed = parseInt($('#settings-speed').val());
 		settings.itemSize = parseFloat($('#settings-item-size').val());
 		settings.screenSize = parseFloat($('#settings-screen-size').val());
+		settings.screenPosition = parseFloat($('#settings-screen-position').val());
 		settings.foregroundColor = $('#settings-color-foreground').spectrum('get').toHexString();
 		settings.backgroundColor = $('#settings-color-background').spectrum('get').toHexString();
 		settings.metronome = ($('#settings-metronome').val() == 'on');
@@ -283,6 +286,23 @@ $(document).ready(function() {
 					// render text
 					runtime.renderTextUntil = Date.now() + constants.renderTextForSeconds * 1000;
 					break;
+				case 81:
+				case 65:
+					// q or a
+					var multiplier = (e.keyCode == 81 ? 1 : -1);
+					// update position
+					settings.screenPosition += constants.screenPositionChange * multiplier;
+					if (settings.screenPosition >= 100) {
+						settings.screenPosition = 100;
+					}
+					else if (settings.screenPosition < -100) {
+						settings.screenPosition = -100;
+					}
+					// recompute settings
+					computeSettings();
+					// render text
+					runtime.renderTextUntil = Date.now() + constants.renderTextForSeconds * 1000;
+					break;
 				default:
 					// all other keys
 					// check if app panel is visible
@@ -338,8 +358,15 @@ $(document).ready(function() {
 	// enforce integer-only inputs
 	$('.integers-only').on('blur', function() {
 		var $this = $(this);
-		var cleanVal = $this.val().replace(/[^0-9]/g, '');
+		var cleanVal = $this.val().replace(/[^0-9\-]/g, '');
 		cleanVal = parseInt(cleanVal);
+		// only allow negative values for some settings
+		switch ($this.attr('id')) {
+			default:
+				cleanVal = Math.abs(cleanVal);
+				break;
+		}
+		// apply minimum and maximum limits
 		switch ($this.attr('id')) {
 			case 'settings-items':
 				if (cleanVal > 1000) {
@@ -347,6 +374,7 @@ $(document).ready(function() {
 				}
 				break;
 		}
+		// set defaults on error
 		if (!cleanVal) {
 			switch ($this.attr('id')) {
 				case 'settings-direction':
@@ -366,6 +394,7 @@ $(document).ready(function() {
 		if ($this.attr('id') == 'settings-stop-after' && cleanVal == 0) {
 			cleanVal = '';
 		}
+		// apply
 		if (cleanVal != $this.val()) {
 			$this.val(cleanVal);
 		}
@@ -374,11 +403,20 @@ $(document).ready(function() {
 	// enforce decimals-only inputs
 	$('.decimals-only').on('blur', function() {
 		var $this = $(this);
-		var cleanVal = $this.val().replace(/[^0-9\.]/g, '');
+		var cleanVal = $this.val().replace(/[^0-9\.\-]/g, '');
 		if (!$.isNumeric(cleanVal)) {
 			cleanVal = 0;
 		}
 		cleanVal = parseFloat(cleanVal);
+		// only allow negative values for some settings
+		switch ($this.attr('id')) {
+			case 'settings-screen-position':
+				break;
+			default:
+				cleanVal = Math.abs(cleanVal);
+				break;
+		}
+		// apply minimum and maximum limits
 		switch ($this.attr('id')) {
 			case 'settings-speed':
 				if (cleanVal >= 360) {
@@ -398,7 +436,16 @@ $(document).ready(function() {
 					cleanVal = 0.1;
 				}
 				break;
+			case 'settings-screen-position':
+				if (cleanVal > 100) {
+					cleanVal = 100;
+				}
+				else if (cleanVal < -100) {
+					cleanVal = -100;
+				}
+				break;
 		}
+		// set defaults on error
 		if (!cleanVal) {
 			switch ($this.attr('id')) {
 				case 'settings-speed':
@@ -413,11 +460,15 @@ $(document).ready(function() {
 				case 'settings-screen-size':
 					cleanVal = defaults.screenSize;
 					break;
+				case 'settings-screen-position':
+					cleanVal = defaults.screenPosition;
+					break;
 				case 'settings-frequency':
 					cleanVal = defaults.frequency;
 					break;
 			}
 		}
+		// apply
 		if (cleanVal != $this.val()) {
 			$this.val(cleanVal);
 			return false;
@@ -458,7 +509,7 @@ $(document).ready(function() {
 				context.fillStyle = settings.backgroundColor;
 				context.fillRect(0, 0, canvas.width, canvas.height);
 				// set origin to canvas center
-				context.translate(canvas.width / 2, canvas.height / 2);
+				context.translate(canvas.width / 2, canvas.height / 2 + settings.canvasRadius() * settings.computed.screenPositionMultiplier);
 				// rotate around canvas center
 				context.rotate(runtime.lastItemAngleRounded);
 				// draw center item
@@ -494,18 +545,27 @@ $(document).ready(function() {
 					// draw speed text
 					context.strokeStyle = settings.backgroundColor;
 					context.lineWidth = 1;
-					context.strokeText(indicatorText, -measureText.width - constants.renderTextSpace, -fontSize * 0.25 - constants.renderTextSpace);
+					context.strokeText(indicatorText, -measureText.width - constants.renderTextSpace, -fontSize * 2.25 - constants.renderTextSpace);
 					context.fillStyle = settings.foregroundColor;
-					context.fillText(indicatorText, -measureText.width - constants.renderTextSpace, -fontSize * 0.25 - constants.renderTextSpace);
-					// set size text
+					context.fillText(indicatorText, -measureText.width - constants.renderTextSpace, -fontSize * 2.25 - constants.renderTextSpace);
+					// set screen size text
 					indicatorText = 'Size: ' + settings.screenSize + '%';
 					measureText = context.measureText(indicatorText);
-					// draw size text
+					// draw screen size text
 					context.strokeStyle = settings.backgroundColor;
 					context.lineWidth = 1;
 					context.strokeText(indicatorText, -measureText.width - constants.renderTextSpace, -fontSize * 1.25 - constants.renderTextSpace);
 					context.fillStyle = settings.foregroundColor;
 					context.fillText(indicatorText, -measureText.width - constants.renderTextSpace, -fontSize * 1.25 - constants.renderTextSpace);
+					// set screen position text
+					indicatorText = 'Position: ' + (settings.screenPosition >= 0 ? '+' : '-') + Math.abs(settings.screenPosition) + '%';
+					measureText = context.measureText(indicatorText);
+					// draw screen position text
+					context.strokeStyle = settings.backgroundColor;
+					context.lineWidth = 1;
+					context.strokeText(indicatorText, -measureText.width - constants.renderTextSpace, -fontSize * 0.25 - constants.renderTextSpace);
+					context.fillStyle = settings.foregroundColor;
+					context.fillText(indicatorText, -measureText.width - constants.renderTextSpace, -fontSize * 0.25 - constants.renderTextSpace);
 					// restore context
 					context.restore();
 				}
@@ -546,6 +606,7 @@ $(document).ready(function() {
 		settings.computed = {};
 		settings.computed.isDirectionClockwise = (settings.direction == 'clockwise');
 		settings.computed.msPerFrame = (1000 / constants.framesPerSecond);
+		settings.computed.screenPositionMultiplier = (settings.screenSize / 100 * settings.screenPosition / 100 * 2 * -1);
 		settings.computed.screenRadius = (settings.canvasRadius() * settings.screenSize / 100);
 		settings.computed.itemRadius = (settings.computed.screenRadius * settings.itemSize / 100);
 		settings.computed.anglePrecisionRoundingMultiplier = Math.pow(10, constants.anglePrecisionSignificantDigits);
@@ -560,6 +621,7 @@ $(document).ready(function() {
 		setSavedSetting(constants.cookieOptions.identifier + '.app.settings.speed', $('#settings-speed').val());
 		setSavedSetting(constants.cookieOptions.identifier + '.app.settings.itemSize', $('#settings-item-size').val());
 		setSavedSetting(constants.cookieOptions.identifier + '.app.settings.screenSize', $('#settings-screen-size').val());
+		setSavedSetting(constants.cookieOptions.identifier + '.app.settings.screenPosition', $('#settings-screen-position').val());
 		setSavedSetting(constants.cookieOptions.identifier + '.app.settings.items', $('#settings-items').val());
 		setSavedSetting(constants.cookieOptions.identifier + '.app.settings.metronome', $('#settings-metronome').val());
 		setSavedSetting(constants.cookieOptions.identifier + '.app.settings.frequency', $('#settings-frequency').val());
@@ -585,6 +647,9 @@ $(document).ready(function() {
 		}
 		if (getSavedSetting(constants.cookieOptions.identifier + '.app.settings.screenSize')) {
 			$('#settings-screen-size').val(getSavedSetting(constants.cookieOptions.identifier + '.app.settings.screenSize'));
+		}
+		if (getSavedSetting(constants.cookieOptions.identifier + '.app.settings.screenPosition')) {
+			$('#settings-screen-position').val(getSavedSetting(constants.cookieOptions.identifier + '.app.settings.screenPosition'));
 		}
 		if (getSavedSetting(constants.cookieOptions.identifier + '.app.settings.metronome')) {
 			$('#settings-metronome').val(getSavedSetting(constants.cookieOptions.identifier + '.app.settings.metronome'));
@@ -644,6 +709,7 @@ $(document).ready(function() {
 		$('#settings-speed').val(defaults.speed);
 		$('#settings-item-size').val(defaults.itemSize);
 		$('#settings-screen-size').val(defaults.screenSize);
+		$('#settings-screen-position').val(defaults.screenPosition);
 		$('#settings-metronome').val(defaults.metronome);
 		$('#settings-frequency').val(defaults.frequency);
 		$('#settings-stop-after').val(defaults.stopAfter);
