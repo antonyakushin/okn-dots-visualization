@@ -20,9 +20,9 @@ $(document).ready(function() {
 	// defaults
 	var defaults = {
 		direction: 'clockwise',
-		items: 15,
+		items: 300,
 		speed: 30,
-		itemSize: 5,
+		itemSize: 2,
 		screenSize: 100,
 		foregroundColor: '#CCC',
 		backgroundColor: '#000',
