@@ -6,7 +6,10 @@
 		<meta name="viewport" content="width=device-width, initial-scale=1">
 		<link rel="stylesheet" href="lib/bootstrap/dist/css/bootstrap.min.css">
 		<link rel="stylesheet" href="lib/spectrum/spectrum.css">
-		<link rel="stylesheet" href="css/main.css">
+		<link rel="stylesheet" href="css/main.css?m=<?php
+		$filemtime = filemtime(dirname(__FILE__) . '/' . 'css/main.css');
+		print ($filemtime ? $filemtime : uniqid());
+		?>">
 	</head>
 	<body>
 		
@@ -210,7 +213,9 @@
 		<script src="lib/bootstrap/dist/js/bootstrap.min.js"></script>
 		<script src="lib/spectrum/spectrum.js"></script>
 		<script src="lib/js-cookie/src/js.cookie.js"></script>
-		<script src="js/main.js"></script>
-		
+		<script src="js/main.js?m=<?php
+			$filemtime = filemtime(dirname(__FILE__) . '/' . 'js/main.js');
+			print ($filemtime ? $filemtime : uniqid());
+		?>"></script>
 	</body>
 </html>
