@@ -55,76 +55,109 @@
 
 					<form>
 
-						<fieldset>
-							<div class="form-group col-sm-4">
-								<label for="settings-direction">Rotation direction <a href="#" data-popup="This is the direction dots will rotate on the screen">(?)</a></label>
-								<select class="form-control" id="settings-direction">
-									<option value="clockwise">Clockwise</option>
-									<option value="counterclockwise">Counterclockwise</option>
-								</select>
+						<div class="panel panel-default">
+							<div class="panel-heading">
+								<h3 class="panel-title">Layout</h3>
 							</div>
-							<div class="form-group col-sm-4">
-								<label for="settings-items">Number of dots <a href="#" data-popup="This is the total number of dots that appear on the screen">(?)</a></label>
-								<input type="text" class="form-control integers-only" id="settings-items" />
+							<div class="panel-body">
+								<fieldset>
+									<div class="form-group col-sm-4">
+										<label for="settings-screen-size">Screen size <a href="#" data-popup="This is the percent of the available screen size that will be used to animate dots">(?)</a></label>
+										<input type="text" class="form-control decimals-only" id="settings-screen-size" />
+									</div>
+									<div class="form-group col-sm-4">
+										<label for="settings-screen-position">Screen position <a href="#" data-popup="This is the percent of the available screen size, representing how for up or down from the center the animation is positioned">(?)</a></label>
+										<input type="text" class="form-control decimals-only" id="settings-screen-position" />
+									</div>
+									<div class="form-group col-sm-4">
+										<label for="settings-fullscreen">Fullscreen mode <a href="#" data-popup="Fullscreen mode (not available in all browsers) will take up the whole screen; press the escape key to exit fullscreen mode">(?)</a></label>
+										<select class="form-control" id="settings-fullscreen">
+											<option value="on" selected>On</option>
+											<option value="off">Off</option>
+										</select>
+									</div>
+								</fieldset>
+								<fieldset>
+									<div class="form-group col-sm-4">
+										<label for="settings-item-size">Dot size <a href="#" data-popup="This is the size of the dots as a percent of the screen size">(?)</a></label>
+										<input type="text" class="form-control decimals-only" id="settings-item-size" />
+									</div>
+									<div class="form-group col-sm-4">
+										<label for="settings-items">Number of dots <a href="#" data-popup="This is the total number of dots that appear on the screen">(?)</a></label>
+										<input type="text" class="form-control integers-only" id="settings-items" />
+									</div>
+									<div class="form-group col-sm-4">
+										&nbsp;
+									</div>
+								</fieldset>
 							</div>
-							<div class="form-group col-sm-4">
-								<label for="settings-speed">Speed (degrees per second) <a href="#" data-popup="This is the number of degrees a dot travels in one second around the center circle">(?)</a></label>
-								<input type="text" class="form-control decimals-only" id="settings-speed" />
-							</div>
-						</fieldset>
+						</div>
 
-						<fieldset>
-							<div class="form-group col-sm-2">
-								<label for="settings-item-size">Dot size <a href="#" data-popup="This is the size of the dots as a percent of the screen size">(?)</a></label>
-								<input type="text" class="form-control decimals-only" id="settings-item-size" />
+						<div class="panel panel-default">
+							<div class="panel-heading">
+								<h3 class="panel-title">Appearance</h3>
 							</div>
-							<div class="form-group col-sm-2">
-								<label for="settings-screen-size">Screen size <a href="#" data-popup="This is the percent of the available screen size that will be used to animate dots">(?)</a></label>
-								<input type="text" class="form-control decimals-only" id="settings-screen-size" />
+							<div class="panel-body">
+								<fieldset>
+									<div class="form-group col-sm-6">
+										<label for="settings-color-foreground">Dot color <a href="#" data-popup="This is the color of each dot">(?)</a></label>
+										<input type="text" class="form-control" id="settings-color-foreground" />
+									</div>
+									<div class="form-group col-sm-6">
+										<label for="settings-color-background">Background color <a href="#" data-popup="This is the background color, under the dots">(?)</a></label>
+										<input type="text" class="form-control" id="settings-color-background" />
+									</div>
+								</fieldset>
 							</div>
-							<div class="form-group col-sm-2">
-								<label for="settings-screen-position">Screen position <a href="#" data-popup="This is the percent of the available screen size, representing how for up or down from the center the animation is positioned">(?)</a></label>
-								<input type="text" class="form-control decimals-only" id="settings-screen-position" />
-							</div>
-							<div class="form-group col-sm-3">
-								<label for="settings-color-foreground">Dot color <a href="#" data-popup="This is the color of each dot">(?)</a></label>
-								<input type="text" class="form-control" id="settings-color-foreground" />
-							</div>
-							<div class="form-group col-sm-3">
-								<label for="settings-color-background">Background color <a href="#" data-popup="This is the background color, under the dots">(?)</a></label>
-								<input type="text" class="form-control" id="settings-color-background" />
-							</div>
-						</fieldset>
+						</div>
 
-						<fieldset>
-							<div class="form-group col-sm-6">
-								<label for="settings-metronome">Metronome <a href="#" data-popup="Metronome (not available in all browsers) plays 14 notes of a piano scale in a loop">(?)</a></label>
-								<select class="form-control" id="settings-metronome">
-									<option value="on">On</option>
-									<option value="off" selected>Off</option>
-								</select>
+						<div class="panel panel-default">
+							<div class="panel-heading">
+								<h3 class="panel-title">Animation</h3>
 							</div>
-							<div class="form-group col-sm-6">
-								<label for="settings-frequency">Metronome frequency (Hz) <a href="#" data-popup="This is frequency with which the metronome scale should be played; some devices may not play all notes">(?)</a></label>
-								<input type="text" class="form-control decimals-only" id="settings-frequency" />
-								A full scale will be played every <span id="settings-frequency-explanation"></span> seconds.
+							<div class="panel-body">
+								<fieldset>
+									<div class="form-group col-sm-4">
+										<label for="settings-direction">Rotation direction <a href="#" data-popup="This is the direction dots will rotate on the screen">(?)</a></label>
+										<select class="form-control" id="settings-direction">
+											<option value="clockwise">Clockwise</option>
+											<option value="counterclockwise">Counterclockwise</option>
+										</select>
+									</div>
+									<div class="form-group col-sm-4">
+										<label for="settings-speed">Speed (degrees per second) <a href="#" data-popup="This is the number of degrees a dot travels in one second around the center circle">(?)</a></label>
+										<input type="text" class="form-control decimals-only" id="settings-speed" />
+									</div>
+									<div class="form-group col-sm-4">
+										<label for="settings-stop-after">Stop after (seconds) <a href="#" data-popup="This is the number of seconds after which the application should automatically exit and return to the settings screen">(?)</a></label>
+										<input type="text" class="form-control integers-only" id="settings-stop-after" placeholder="Optional" />
+									</div>
+								</fieldset>
 							</div>
-						</fieldset>
+						</div>
 
-						<fieldset>
-							<div class="form-group col-sm-6">
-								<label for="settings-stop-after">Stop after (seconds) <a href="#" data-popup="This is the number of seconds after which the application should automatically exit and return to the settings screen">(?)</a></label>
-								<input type="text" class="form-control integers-only" id="settings-stop-after" placeholder="Optional" />
+						<div class="panel panel-default">
+							<div class="panel-heading">
+								<h3 class="panel-title">Audio</h3>
 							</div>
-							<div class="form-group col-sm-6">
-								<label for="settings-fullscreen">Fullscreen mode <a href="#" data-popup="Fullscreen mode (not available in all browsers) will take up the whole screen; press the escape key to exit fullscreen mode">(?)</a></label>
-								<select class="form-control" id="settings-fullscreen">
-									<option value="on" selected>On</option>
-									<option value="off">Off</option>
-								</select>
+							<div class="panel-body">
+								<fieldset>
+									<div class="form-group col-sm-6">
+										<label for="settings-metronome">Metronome <a href="#" data-popup="Metronome (not available in all browsers) plays 14 notes of a piano scale in a loop">(?)</a></label>
+										<select class="form-control" id="settings-metronome">
+											<option value="on">On</option>
+											<option value="off" selected>Off</option>
+										</select>
+									</div>
+									<div class="form-group col-sm-6">
+										<label for="settings-frequency">Metronome frequency (Hz) <a href="#" data-popup="This is frequency with which the metronome scale should be played; some devices may not play all notes">(?)</a></label>
+										<input type="text" class="form-control decimals-only" id="settings-frequency" />
+										A full scale will be played every <span id="settings-frequency-explanation"></span> seconds.
+									</div>
+								</fieldset>
 							</div>
-						</fieldset>
-						
+						</div>
+
 					</form>
 					
 					<h1>Usage</h1>

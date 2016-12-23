@@ -10,6 +10,9 @@
 .container {
 	padding-bottom: 15px;
 }
+.panel-body {
+	padding-bottom: 0;
+}
 /*
 	Id and specific styles
 */
