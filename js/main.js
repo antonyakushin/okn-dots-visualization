@@ -377,7 +377,7 @@ $(document).ready(function() {
 		var $this = $(this);
 		// enable or disable metronome frequency based on whether metronome is on
 		var isMetronomeOn = ($this.val() == 'on');
-		$('#settings-metronome-frequency').prop('disabled', isMetronomeOn);
+		$('#settings-metronome-frequency').prop('disabled', !isMetronomeOn);
 	});
 
 	// when type changed
