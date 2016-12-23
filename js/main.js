@@ -659,7 +659,7 @@ $(document).ready(function() {
 			if (settings.computed.isTypeLinear) {
 				runtime.itemAngleActual += settings.computed.rotationAnglePerFrame;
 			} else {
-				runtime.itemAngleActual = (settings.peakVelocity * Math.PI / 180) * Math.sin(Math.PI * 2 / 1000 * (timeNow - runtime.timeStarted) * settings.rotationFrequency);
+				runtime.itemAngleActual = (settings.peakVelocity * Math.PI / 180) * Math.sin(Math.PI * 2 / 1000 * (timeNow - runtime.timeStarted) * settings.rotationFrequency) * (settings.computed.isDirectionClockwise ? 1 : -1);
 			}
 			if (runtime.itemAngleActual >= Math.PI * 2) {
 				runtime.itemAngleActual %= Math.PI * 2;
