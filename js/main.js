@@ -35,7 +35,7 @@ $(document).ready(function() {
 		backgroundColor: '#000',
 		metronome: 'off',
 		frequency: 0.05,
-		stopAfter: '',
+		exitAfter: '',
 		fullscreen: 'on'
 	};
 	// settings
@@ -63,7 +63,7 @@ $(document).ready(function() {
 		currentNoteIndex: 0,
 		isDrawing: false,
 		isPlaying: false,
-		stopAfterHandle: null,
+		exitAfterHandle: null,
 		renderTextUntil: 0,
 		items: []
 	};
@@ -135,7 +135,7 @@ $(document).ready(function() {
 		settings.backgroundColor = $('#settings-color-background').spectrum('get').toHexString();
 		settings.metronome = ($('#settings-metronome').val() == 'on');
 		settings.frequency = parseFloat($('#settings-frequency').val());
-		settings.stopAfter = parseInt($('#settings-stop-after').val());
+		settings.exitAfter = parseInt($('#settings-exit-after').val());
 		settings.fullscreen = ($('#settings-fullscreen').val() == 'on');
 		// update saved settings
 		updateSavedSettings();
@@ -205,9 +205,9 @@ $(document).ready(function() {
 				noteElement.pause();
 			}
 		}
-		// set stop after
-		if (settings.stopAfter > 0) {
-			runtime.stopAfterHandle = setTimeout(returnToSettings, settings.stopAfter * 1000);
+		// set exit after
+		if (settings.exitAfter > 0) {
+			runtime.exitAfterHandle = setTimeout(returnToSettings, settings.exitAfter * 1000);
 		}
 		// start fullscreen if available
 		if (settings.isFullscreenAvailable() && settings.fullscreen) {
@@ -302,6 +302,13 @@ $(document).ready(function() {
 					// render text
 					runtime.renderTextUntil = Date.now() + constants.renderTextForSeconds * 1000;
 					break;
+				case 90:
+					// z
+					// reverse direction
+					reverseDirection();
+					// recompute settings
+					computeSettings();
+					break;
 				default:
 					// all other keys
 					// check if app panel is visible
@@ -382,15 +389,15 @@ $(document).ready(function() {
 				case 'settings-items':
 					cleanVal = defaults.items;
 					break;
-				case 'settings-stop-after':
-					cleanVal = defaults.stopAfter;
+				case 'settings-exit-after':
+					cleanVal = defaults.exitAfter;
 					break;
 				case 'settings-fullscreen':
 					cleanVal = defaults.fullscreen;
 					break;
 			}
 		}
-		if ($this.attr('id') == 'settings-stop-after' && cleanVal == 0) {
+		if ($this.attr('id') == 'settings-exit-after' && cleanVal == 0) {
 			cleanVal = '';
 		}
 		// apply
@@ -624,7 +631,7 @@ $(document).ready(function() {
 		setSavedSetting(constants.cookieOptions.identifier + '.app.settings.items', $('#settings-items').val());
 		setSavedSetting(constants.cookieOptions.identifier + '.app.settings.metronome', $('#settings-metronome').val());
 		setSavedSetting(constants.cookieOptions.identifier + '.app.settings.frequency', $('#settings-frequency').val());
-		setSavedSetting(constants.cookieOptions.identifier + '.app.settings.stopAfter', $('#settings-stop-after').val());
+		setSavedSetting(constants.cookieOptions.identifier + '.app.settings.exitAfter', $('#settings-exit-after').val());
 		setSavedSetting(constants.cookieOptions.identifier + '.app.settings.fullscreen', $('#settings-fullscreen').val());
 		setSavedSetting(constants.cookieOptions.identifier + '.app.settings.foregroundColor', $('#settings-color-foreground').spectrum('get').toHexString());
 		setSavedSetting(constants.cookieOptions.identifier + '.app.settings.backgroundColor', $('#settings-color-background').spectrum('get').toHexString());
@@ -656,8 +663,8 @@ $(document).ready(function() {
 		if (getSavedSetting(constants.cookieOptions.identifier + '.app.settings.frequency')) {
 			$('#settings-frequency').val(getSavedSetting(constants.cookieOptions.identifier + '.app.settings.frequency'));
 		}
-		if (getSavedSetting(constants.cookieOptions.identifier + '.app.settings.stopAfter')) {
-			$('#settings-stop-after').val(getSavedSetting(constants.cookieOptions.identifier + '.app.settings.stopAfter'));
+		if (getSavedSetting(constants.cookieOptions.identifier + '.app.settings.exitAfter')) {
+			$('#settings-exit-after').val(getSavedSetting(constants.cookieOptions.identifier + '.app.settings.exitAfter'));
 		}
 		if (getSavedSetting(constants.cookieOptions.identifier + '.app.settings.fullscreen')) {
 			$('#settings-fullscreen').val(getSavedSetting(constants.cookieOptions.identifier + '.app.settings.fullscreen'));
@@ -711,7 +718,7 @@ $(document).ready(function() {
 		$('#settings-screen-position').val(defaults.screenPosition);
 		$('#settings-metronome').val(defaults.metronome);
 		$('#settings-frequency').val(defaults.frequency);
-		$('#settings-stop-after').val(defaults.stopAfter);
+		$('#settings-exit-after').val(defaults.exitAfter);
 		$('#settings-fullscreen').val(defaults.fullscreen);
 		// color pickers
 		$('#settings-color-foreground').spectrum({
@@ -732,10 +739,10 @@ $(document).ready(function() {
 
 	// exit app and return to settings
 	function returnToSettings() {
-		// clear stop after handle if it exists
-		if (runtime.stopAfterHandle !== null) {
-			clearTimeout(runtime.stopAfterHandle);
-			runtime.stopAfterHandle = null;
+		// clear exit after handle if it exists
+		if (runtime.exitAfterHandle !== null) {
+			clearTimeout(runtime.exitAfterHandle);
+			runtime.exitAfterHandle = null;
 		}
 		// check if fullscreen
 		if (settings.isFullscreenAvailable() && settings.isFullscreen()) {
@@ -766,6 +773,14 @@ $(document).ready(function() {
 		$('.container').show();
 		// scroll to top
 		scrollToTop();
+	}
+
+	// reverse direction
+	function reverseDirection() {
+		// set direction to opposite value
+		settings.direction = (settings.direction == 'clockwise' ? 'counterclockwise' : 'clockwise');
+		// recompute settings
+		computeSettings();
 	}
 
 	// play next note

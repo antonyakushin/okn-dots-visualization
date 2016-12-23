@@ -129,8 +129,8 @@
 										<input type="text" class="form-control decimals-only" id="settings-speed" />
 									</div>
 									<div class="form-group col-sm-4">
-										<label for="settings-stop-after">Stop after (seconds) <a href="#" data-popup="This is the number of seconds after which the application should automatically exit and return to the settings screen">(?)</a></label>
-										<input type="text" class="form-control integers-only" id="settings-stop-after" placeholder="Optional" />
+										<label for="settings-exit-after">Exit after (seconds) <a href="#" data-popup="This is the number of seconds after which the application should automatically exit and return to the settings screen">(?)</a></label>
+										<input type="text" class="form-control integers-only" id="settings-exit-after" placeholder="Optional" />
 									</div>
 								</fieldset>
 							</div>
@@ -170,6 +170,7 @@
 						<li>DOWN decreases the screen size</li>
 						<li>Q moves the screen up</li>
 						<li>A moves the screen down</li>
+						<li>Z reverses the animation direction</li>
 					</ul>
 
 					<button class="btn btn-primary btn-lg" id="settings-run-button">Start Web Application</button>
