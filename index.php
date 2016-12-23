@@ -117,26 +117,44 @@
 							</div>
 							<div class="panel-body">
 								<fieldset>
-									<div class="form-group col-sm-6">
+									<div class="form-group col-sm-4">
+										<label for="settings-type">Rotation type <a href="#" data-popup="This is the type of rotation that will take place">(?)</a></label>
+										<select class="form-control" id="settings-type">
+											<option value="linear">Linear</option>
+											<option value="sinusoidal">Sinusoidal</option>
+										</select>
+									</div>
+									<div class="form-group col-sm-4">
 										<label for="settings-direction">Rotation direction <a href="#" data-popup="This is the direction dots will rotate on the screen">(?)</a></label>
 										<select class="form-control" id="settings-direction">
 											<option value="clockwise">Clockwise</option>
 											<option value="counterclockwise">Counterclockwise</option>
 										</select>
 									</div>
-									<div class="form-group col-sm-6">
-										<label for="settings-speed">Speed (degrees per second) <a href="#" data-popup="This is the number of degrees a dot travels in one second around the center circle">(?)</a></label>
-										<input type="text" class="form-control decimals-only" id="settings-speed" />
+									<div class="form-group col-sm-4">
+										<label for="settings-exit-after">Exit after (seconds) <a href="#" data-popup="This is the number of seconds after which the application should automatically exit and return to the settings screen">(?)</a></label>
+										<input type="text" class="form-control integers-only" id="settings-exit-after" placeholder="Optional" />
 									</div>
 								</fieldset>
 								<fieldset>
 									<div class="form-group col-sm-6">
+										<label for="settings-rotation-speed">Rotation speed (degrees per second) <a href="#" data-popup="This is the number of degrees a dot rotates in one second around the center circle">(?)</a></label>
+										<input type="text" class="form-control decimals-only" id="settings-rotation-speed" />
+									</div>
+									<div class="form-group col-sm-6">
 										<label for="settings-alternate-rotation-every">Alternate rotation every (seconds) <a href="#" data-popup="This is the number of seconds after which the application should automatically toggle between clockwise and counterclockwise rotation">(?)</a></label>
 										<input type="text" class="form-control integers-only" id="settings-alternate-rotation-every" placeholder="Optional" />
 									</div>
+								</fieldset>
+								<fieldset>
 									<div class="form-group col-sm-6">
-										<label for="settings-exit-after">Exit after (seconds) <a href="#" data-popup="This is the number of seconds after which the application should automatically exit and return to the settings screen">(?)</a></label>
-										<input type="text" class="form-control integers-only" id="settings-exit-after" placeholder="Optional" />
+										<label for="settings-peak-velocity">Peak velocity (degrees per second) <a href="#" data-popup="This is the peak velocity of the sinusoidal movement">(?)</a></label>
+										<input type="text" class="form-control decimals-only" id="settings-peak-velocity" />
+									</div>
+									<div class="form-group col-sm-6">
+										<label for="settings-rotation-frequency">Rotation frequency (Hz) <a href="#" data-popup="This is frequency of the sinusoidal movement">(?)</a></label>
+										<input type="text" class="form-control decimals-only" id="settings-rotation-frequency" />
+										A full sinusoidal rotation will occur every <span id="settings-rotation-frequency-explanation"></span> seconds.
 									</div>
 								</fieldset>
 							</div>
@@ -156,9 +174,9 @@
 										</select>
 									</div>
 									<div class="form-group col-sm-6">
-										<label for="settings-frequency">Metronome frequency (Hz) <a href="#" data-popup="This is frequency with which the metronome scale should be played; some devices may not play all notes">(?)</a></label>
-										<input type="text" class="form-control decimals-only" id="settings-frequency" />
-										A full scale will be played every <span id="settings-frequency-explanation"></span> seconds.
+										<label for="settings-metronome-frequency">Metronome frequency (Hz) <a href="#" data-popup="This is frequency with which the metronome scale should be played; some devices may not play all notes">(?)</a></label>
+										<input type="text" class="form-control decimals-only" id="settings-metronome-frequency" />
+										A full scale will be played every <span id="settings-metronome-frequency-explanation"></span> seconds.
 									</div>
 								</fieldset>
 							</div>
@@ -176,7 +194,7 @@
 						<li>DOWN decreases the screen size</li>
 						<li>Q moves the screen up</li>
 						<li>A moves the screen down</li>
-						<li>Z reverses the animation direction</li>
+						<li>Z reverses the animation direction (linear rotation only)</li>
 					</ul>
 
 					<button class="btn btn-primary btn-lg" id="settings-run-button">Start Web Application</button>

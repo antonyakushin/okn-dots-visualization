@@ -20,40 +20,47 @@ $(document).ready(function() {
 		renderTextForSeconds: 3,
 		renderTextSpace: 10,
 		minFontSize: 20,
-		anglePrecisionSignificantDigits: 3,
+		anglePrecisionSignificantDigits: 4,
 		computed: {}
 	};
 	// defaults
 	var defaults = {
+		type: 'linear',
 		direction: 'clockwise',
 		items: 300,
-		speed: 30,
+		rotationSpeed: 30,
+		peakVelocity: 30,
+		rotationFrequency: 0.05,
 		itemSize: 2,
 		screenSize: 100,
 		screenPosition: 0,
 		foregroundColor: '#CCC',
 		backgroundColor: '#000',
 		metronome: 'off',
-		frequency: 0.05,
+		metronomeFrequency: 0.05,
 		alternateRotationEvery: '',
 		exitAfter: '',
 		fullscreen: 'on'
 	};
 	// settings
 	var settings = {
-		isFullscreen: function() {
-			return (document.fullscreenElement || document.webkitIsFullScreen || document.mozFullScreen || document.msFullscreenElement);
-		},
-		isFullscreenAvailable: function() {
-			return (canvas.requestFullscreen || canvas.webkitRequestFullScreen || canvas.mozRequestFullScreen || canvas.msRequestFullscreen);
-		},
-		canvasRadius: function() {
-			return Math.min(canvas.width, canvas.height) / 2; // do not factor in setting for canvas size
+		compute: {
+			isFullscreen: function() {
+				return (document.fullscreenElement || document.webkitIsFullScreen || document.mozFullScreen || document.msFullscreenElement);
+			},
+			isFullscreenAvailable: function() {
+				return (canvas.requestFullscreen || canvas.webkitRequestFullScreen || canvas.mozRequestFullScreen || canvas.msRequestFullscreen);
+			},
+			canvasRadius: function() {
+				return Math.min(canvas.width, canvas.height) / 2; // do not factor in setting for canvas size
+			}
 		},
 		computed: {} // computed settings placeholder (allows calling frequently without recalculating)
 	};
 	// runtime/state variables
 	var runtime = {
+		timeStarted: 0,
+		timeEnded: 0,
 		timeLastFrameDrawn: null,
 		timeSinceLastFrameDrawn: null,
 		itemAngleActual: 0,
@@ -94,7 +101,7 @@ $(document).ready(function() {
 	// call resize
 	resizeCanvas();
 	// check if fullscreen is available
-	if (!settings.isFullscreenAvailable()) {
+	if (!settings.compute.isFullscreenAvailable()) {
 		// if no, remove fullscreen option
 		defaults.fullscreen = 'off';
 		$('#settings-fullscreen').val('off');
@@ -127,16 +134,19 @@ $(document).ready(function() {
 	// settings run button
 	$('#settings-run-button').on('click', function() {
 		// save settings
+		settings.type = $('#settings-type').val();
 		settings.direction = $('#settings-direction').val();
 		settings.items = parseInt($('#settings-items').val());
-		settings.speed = parseInt($('#settings-speed').val());
+		settings.rotationSpeed = parseInt($('#settings-rotation-speed').val());
+		settings.peakVelocity = parseInt($('#settings-peak-velocity').val());
+		settings.rotationFrequency = parseFloat($('#settings-rotation-frequency').val());
 		settings.itemSize = parseFloat($('#settings-item-size').val());
 		settings.screenSize = parseFloat($('#settings-screen-size').val());
 		settings.screenPosition = parseFloat($('#settings-screen-position').val());
 		settings.foregroundColor = $('#settings-color-foreground').spectrum('get').toHexString();
 		settings.backgroundColor = $('#settings-color-background').spectrum('get').toHexString();
 		settings.metronome = ($('#settings-metronome').val() == 'on');
-		settings.frequency = parseFloat($('#settings-frequency').val());
+		settings.metronomeFrequency = parseFloat($('#settings-metronome-frequency').val());
 		settings.alternateRotationEvery = parseInt($('#settings-alternate-rotation-every').val());
 		settings.exitAfter = parseInt($('#settings-exit-after').val());
 		settings.fullscreen = ($('#settings-fullscreen').val() == 'on');
@@ -145,6 +155,8 @@ $(document).ready(function() {
 		// compute settings
 		computeSettings();
 		// apply settings
+		runtime.timeStarted = Date.now();
+		runtime.timeEnded = null;
 		runtime.itemAngleActual = 0;
 		runtime.itemAngleRounded = 0;
 		runtime.lastItemAngleRounded = -1;
@@ -217,7 +229,7 @@ $(document).ready(function() {
 			runtime.exitAfterHandle = setTimeout(returnToSettings, settings.exitAfter * 1000);
 		}
 		// start fullscreen if available
-		if (settings.isFullscreenAvailable() && settings.fullscreen) {
+		if (settings.compute.isFullscreenAvailable() && settings.fullscreen) {
 			if (canvas.requestFullScreen) {
 				canvas.requestFullScreen();
 			} else if (canvas.webkitRequestFullScreen) {
@@ -263,13 +275,20 @@ $(document).ready(function() {
 				case 39:
 					// left or right
 					multiplier = (e.keyCode == 39 ? 1 : -1);
-					// update speed
-					settings.speed += constants.speedChange * multiplier;
-					if (settings.speed >= 360) {
-						settings.speed = 360;
+					// update rotation
+					settings.rotationSpeed += constants.speedChange * multiplier;
+					if (settings.rotationSpeed >= 360) {
+						settings.rotationSpeed = 360;
 					}
-					else if (settings.speed < -360) {
-						settings.speed = -360;
+					else if (settings.rotationSpeed < -360) {
+						settings.rotationSpeed = -360;
+					}
+					settings.peakVelocity += constants.speedChange * multiplier;
+					if (settings.peakVelocity >= 360) {
+						settings.peakVelocity = 360;
+					}
+					else if (settings.peakVelocity < -360) {
+						settings.peakVelocity = -360;
 					}
 					// recompute settings
 					computeSettings();
@@ -356,14 +375,26 @@ $(document).ready(function() {
 	// when metronome changed
 	$('#settings-metronome').on('change', function() {
 		var $this = $(this);
-		// enable or disable frequency based on whether metronome is on
-		$('#settings-frequency').prop('disabled', ($this.val() != 'on'));
+		// enable or disable metronome frequency based on whether metronome is on
+		var isMetronomeOn = ($this.val() == 'on');
+		$('#settings-metronome-frequency').prop('disabled', isMetronomeOn);
+	});
+
+	// when type changed
+	$('#settings-type').on('change', function() {
+		var $this = $(this);
+		// enable or disable speed options based on whether type is linear
+		var isTypeLinear = ($this.val() == 'linear');
+		$('#settings-rotation-speed').prop('disabled', !isTypeLinear);
+		$('#settings-alternate-rotation-every').prop('disabled', !isTypeLinear);
+		$('#settings-peak-velocity').prop('disabled', isTypeLinear);
+		$('#settings-rotation-frequency').prop('disabled', isTypeLinear);
 	});
 
 	// when fullscreen changed
 	$(document).bind('fullscreenchange webkitfullscreenchange mozfullscreenchange MSFullscreenChange', function() {
 		// check if fullscreen turned off and app running
-		if (!settings.isFullscreen() && $('#app-panel').is(':visible')) {
+		if (!settings.compute.isFullscreen() && $('#app-panel').is(':visible')) {
 			// if yes, return to settings
 			returnToSettings();
 		}
@@ -438,9 +469,14 @@ $(document).ready(function() {
 		}
 		// apply minimum and maximum limits
 		switch ($this.attr('id')) {
-			case 'settings-speed':
+			case 'settings-rotation-speed':
 				if (cleanVal >= 360) {
-					cleanVal = 0;
+					cleanVal %= 360;
+				}
+				break;
+			case 'settings-speak-velocity':
+				if (cleanVal >= 360) {
+					cleanVal %= 360;
 				}
 				break;
 			case 'settings-item-size':
@@ -468,11 +504,20 @@ $(document).ready(function() {
 		// set defaults on error
 		if (!cleanVal) {
 			switch ($this.attr('id')) {
-				case 'settings-speed':
+				case 'settings-rotation-speed':
 					// allow 0
 					if (cleanVal != 0) {
-						cleanVal = defaults.speed;
+						cleanVal = defaults.rotationSpeed;
 					}
+					break;
+				case 'settings-peak-velocity':
+					// allow 0
+					if (cleanVal != 0) {
+						cleanVal = defaults.peakVelocity;
+					}
+					break;
+				case 'settings-rotation-frequency':
+					cleanVal = defaults.rotationFrequency;
 					break;
 				case 'settings-item-size':
 					cleanVal = defaults.itemSize;
@@ -483,8 +528,8 @@ $(document).ready(function() {
 				case 'settings-screen-position':
 					cleanVal = defaults.screenPosition;
 					break;
-				case 'settings-frequency':
-					cleanVal = defaults.frequency;
+				case 'settings-metronome-frequency':
+					cleanVal = defaults.metronomeFrequency;
 					break;
 			}
 		}
@@ -495,8 +540,8 @@ $(document).ready(function() {
 		}
 	});
 
-	// on frequency update
-	$('#settings-frequency').on('keydown blur', function(e) {
+	// on rotation frequency update
+	$('#settings-rotation-frequency').on('keydown blur', function(e) {
 		var $this = $(this);
 		var val = parseFloat($this.val());
 		// only enforce on blur
@@ -507,19 +552,39 @@ $(document).ready(function() {
 			}
 			// do not allow 0
 			else if (val == 0) {
-				$this.val(defaults.frequency);
+				$this.val(defaults.rotationFrequency);
 			}
 		}
-		$('#settings-frequency-explanation').html(Math.round(1.0 / parseFloat($this.val()), 5));
+		$('#settings-rotation-frequency-explanation').html(Math.round(1.0 / parseFloat($this.val()), 5));
+	});
+
+	// on metronome frequency update
+	$('#settings-metronome-frequency').on('keydown blur', function(e) {
+		var $this = $(this);
+		var val = parseFloat($this.val());
+		// only enforce on blur
+		if (e.type == 'blur') {
+			// require 1 or less
+			if (val > 1.0) {
+				$this.val('1');
+			}
+			// do not allow 0
+			else if (val == 0) {
+				$this.val(defaults.metronomeFrequency);
+			}
+		}
+		$('#settings-metronome-frequency-explanation').html(Math.round(1.0 / parseFloat($this.val()), 5));
 	});
 
 	// draw canvas frame
 	function draw() {
 		// draw using framerate
-		var shouldAlwaysDraw = (Math.round(settings.computed.rotationAnglePerFrame * settings.computed.anglePrecisionRoundingMultiplier) == 0);
+		var shouldAlwaysDraw = (!settings.computed.isTypeLinear || Math.round(settings.computed.rotationAnglePerFrame * settings.computed.anglePrecisionRoundingMultiplier) == 0);
 		var timeNow = Date.now();
 		runtime.timeSinceLastFrameDrawn = timeNow - runtime.timeLastFrameDrawn;
+		// only when it is time draw based on the frames per second
 		if (shouldAlwaysDraw || runtime.timeSinceLastFrameDrawn > settings.computed.msPerFrame) {
+			// set last time frame drawn (doesn't actually have to be drawn below, this is for computing whether to draw)
 			runtime.timeLastFrameDrawn = timeNow - (runtime.timeSinceLastFrameDrawn % settings.computed.msPerFrame);
 			// only draw if animation has moved
 			if (shouldAlwaysDraw || runtime.lastItemAngleRounded != runtime.itemAngleRounded) {
@@ -529,7 +594,7 @@ $(document).ready(function() {
 				context.fillStyle = settings.backgroundColor;
 				context.fillRect(0, 0, canvas.width, canvas.height);
 				// set origin to canvas center
-				context.translate(canvas.width / 2, canvas.height / 2 + settings.canvasRadius() * settings.computed.screenPositionMultiplier);
+				context.translate(canvas.width / 2, canvas.height / 2 + settings.compute.canvasRadius() * settings.computed.screenPositionMultiplier);
 				// rotate around canvas center
 				context.rotate(runtime.lastItemAngleRounded);
 				// draw center item
@@ -542,7 +607,7 @@ $(document).ready(function() {
 				for (var itemIndex = 0; itemIndex < runtime.items.length; itemIndex++) {
 					var item = runtime.items[itemIndex];
 					context.beginPath();
-					context.arc(item.x / constants.itemCalculationScreenRadius * settings.canvasRadius() * settings.screenSize / 100, item.y / constants.itemCalculationScreenRadius * settings.canvasRadius() * settings.screenSize / 100, settings.computed.itemRadius, 0, Math.PI * 2);
+					context.arc(item.x / constants.itemCalculationScreenRadius * settings.compute.canvasRadius() * settings.screenSize / 100, item.y / constants.itemCalculationScreenRadius * settings.compute.canvasRadius() * settings.screenSize / 100, settings.computed.itemRadius, 0, Math.PI * 2);
 					context.closePath();
 					context.fill();
 				}
@@ -560,7 +625,7 @@ $(document).ready(function() {
 					var indicatorText;
 					var measureText;
 					// set speed text
-					indicatorText = 'Speed: ' + (Math.round(settings.speed * 10) / 10) + '°/s';
+					indicatorText = (settings.computed.isTypeLinear ? 'Speed' : 'Peak velocity') + ': ' + (Math.round(settings.computed.speed * 10) / 10) + '°/s';
 					measureText = context.measureText(indicatorText);
 					// draw speed text
 					context.strokeStyle = settings.backgroundColor;
@@ -591,7 +656,11 @@ $(document).ready(function() {
 				}
 			}
 			// move
-			runtime.itemAngleActual += settings.computed.rotationAnglePerFrame;
+			if (settings.computed.isTypeLinear) {
+				runtime.itemAngleActual += settings.computed.rotationAnglePerFrame;
+			} else {
+				runtime.itemAngleActual = (settings.peakVelocity * Math.PI / 180) * Math.sin(Math.PI * 2 / 1000 * (timeNow - runtime.timeStarted) * settings.rotationFrequency);
+			}
 			if (runtime.itemAngleActual >= Math.PI * 2) {
 				runtime.itemAngleActual %= Math.PI * 2;
 			}
@@ -624,27 +693,32 @@ $(document).ready(function() {
 	// re-compute settings
 	function computeSettings() {
 		settings.computed = {};
+		settings.computed.isTypeLinear = (settings.type == 'linear');
 		settings.computed.isDirectionClockwise = (settings.direction == 'clockwise');
+		settings.computed.speed = (settings.computed.isTypeLinear ? settings.rotationSpeed : settings.peakVelocity);
 		settings.computed.msPerFrame = (1000 / constants.framesPerSecond);
 		settings.computed.screenPositionMultiplier = (settings.screenSize / 100 * settings.screenPosition / 100 * 2 * -1);
-		settings.computed.screenRadius = (settings.canvasRadius() * settings.screenSize / 100);
+		settings.computed.screenRadius = (settings.compute.canvasRadius() * settings.screenSize / 100);
 		settings.computed.itemRadius = (settings.computed.screenRadius * settings.itemSize / 100);
 		settings.computed.anglePrecisionRoundingMultiplier = Math.pow(10, constants.anglePrecisionSignificantDigits);
-		settings.computed.rotationAnglePerFrame = Math.round((settings.speed * Math.PI / 180 * 2) / constants.framesPerSecond * (settings.computed.isDirectionClockwise ? 1 : -1) * Math.pow(settings.computed.anglePrecisionRoundingMultiplier, 2)) / Math.pow(settings.computed.anglePrecisionRoundingMultiplier, 2);
-		settings.computed.noteSeconds = (1.0 / settings.frequency) / parseFloat(constants.notes);
-		settings.computed.scaleSeconds = (1.0 / settings.frequency);
+		settings.computed.rotationAnglePerFrame = Math.round((settings.computed.speed * Math.PI / 180 * 2) / constants.framesPerSecond * (settings.computed.isDirectionClockwise ? 1 : -1) * Math.pow(settings.computed.anglePrecisionRoundingMultiplier, 2)) / Math.pow(settings.computed.anglePrecisionRoundingMultiplier, 2);
+		settings.computed.noteSeconds = (1.0 / settings.metronomeFrequency) / parseFloat(constants.notes);
+		settings.computed.scaleSeconds = (1.0 / settings.metronomeFrequency);
 	}
 
 	// update saved settings
 	function updateSavedSettings() {
+		setSavedSetting(constants.cookieOptions.identifier + '.app.settings.type', $('#settings-type').val());
 		setSavedSetting(constants.cookieOptions.identifier + '.app.settings.direction', $('#settings-direction').val());
-		setSavedSetting(constants.cookieOptions.identifier + '.app.settings.speed', $('#settings-speed').val());
+		setSavedSetting(constants.cookieOptions.identifier + '.app.settings.rotationSpeed', $('#settings-rotation-speed').val());
+		setSavedSetting(constants.cookieOptions.identifier + '.app.settings.peakVelocity', $('#settings-peak-velocity').val());
+		setSavedSetting(constants.cookieOptions.identifier + '.app.settings.rotationFrequency', $('#settings-rotation-frequency').val());
 		setSavedSetting(constants.cookieOptions.identifier + '.app.settings.itemSize', $('#settings-item-size').val());
 		setSavedSetting(constants.cookieOptions.identifier + '.app.settings.screenSize', $('#settings-screen-size').val());
 		setSavedSetting(constants.cookieOptions.identifier + '.app.settings.screenPosition', $('#settings-screen-position').val());
 		setSavedSetting(constants.cookieOptions.identifier + '.app.settings.items', $('#settings-items').val());
 		setSavedSetting(constants.cookieOptions.identifier + '.app.settings.metronome', $('#settings-metronome').val());
-		setSavedSetting(constants.cookieOptions.identifier + '.app.settings.frequency', $('#settings-frequency').val());
+		setSavedSetting(constants.cookieOptions.identifier + '.app.settings.metronomeFrequency', $('#settings-metronome-frequency').val());
 		setSavedSetting(constants.cookieOptions.identifier + '.app.settings.alternateRotationEvery', $('#settings-alternate-rotation-every').val());
 		setSavedSetting(constants.cookieOptions.identifier + '.app.settings.exitAfter', $('#settings-exit-after').val());
 		setSavedSetting(constants.cookieOptions.identifier + '.app.settings.fullscreen', $('#settings-fullscreen').val());
@@ -654,14 +728,23 @@ $(document).ready(function() {
 
 	// restore saved settings
 	function restoreSavedSettings() {
+		if (getSavedSetting(constants.cookieOptions.identifier + '.app.settings.type')) {
+			$('#settings-type').val(getSavedSetting(constants.cookieOptions.identifier + '.app.settings.type'));
+		}
 		if (getSavedSetting(constants.cookieOptions.identifier + '.app.settings.direction')) {
 			$('#settings-direction').val(getSavedSetting(constants.cookieOptions.identifier + '.app.settings.direction'));
 		}
 		if (getSavedSetting(constants.cookieOptions.identifier + '.app.settings.items')) {
 			$('#settings-items').val(getSavedSetting(constants.cookieOptions.identifier + '.app.settings.items'));
 		}
-		if (getSavedSetting(constants.cookieOptions.identifier + '.app.settings.speed')) {
-			$('#settings-speed').val(getSavedSetting(constants.cookieOptions.identifier + '.app.settings.speed'));
+		if (getSavedSetting(constants.cookieOptions.identifier + '.app.settings.rotationSpeed')) {
+			$('#settings-rotation-speed').val(getSavedSetting(constants.cookieOptions.identifier + '.app.settings.rotationSpeed'));
+		}
+		if (getSavedSetting(constants.cookieOptions.identifier + '.app.settings.peakVelocity')) {
+			$('#settings-peak-velocity').val(getSavedSetting(constants.cookieOptions.identifier + '.app.settings.peakVelocity'));
+		}
+		if (getSavedSetting(constants.cookieOptions.identifier + '.app.settings.rotationFrequency')) {
+			$('#settings-rotation-frequency').val(getSavedSetting(constants.cookieOptions.identifier + '.app.settings.rotationFrequency'));
 		}
 		if (getSavedSetting(constants.cookieOptions.identifier + '.app.settings.itemSize')) {
 			$('#settings-item-size').val(getSavedSetting(constants.cookieOptions.identifier + '.app.settings.itemSize'));
@@ -675,8 +758,8 @@ $(document).ready(function() {
 		if (getSavedSetting(constants.cookieOptions.identifier + '.app.settings.metronome')) {
 			$('#settings-metronome').val(getSavedSetting(constants.cookieOptions.identifier + '.app.settings.metronome'));
 		}
-		if (getSavedSetting(constants.cookieOptions.identifier + '.app.settings.frequency')) {
-			$('#settings-frequency').val(getSavedSetting(constants.cookieOptions.identifier + '.app.settings.frequency'));
+		if (getSavedSetting(constants.cookieOptions.identifier + '.app.settings.metronomeFrequency')) {
+			$('#settings-metronome-frequency').val(getSavedSetting(constants.cookieOptions.identifier + '.app.settings.metronomeFrequency'));
 		}
 		if (getSavedSetting(constants.cookieOptions.identifier + '.app.settings.alternateRotationEvery')) {
 			$('#settings-alternate-rotation-every').val(getSavedSetting(constants.cookieOptions.identifier + '.app.settings.alternateRotationEvery'));
@@ -728,14 +811,17 @@ $(document).ready(function() {
 	// reset defaults
 	function resetDefaults() {
 		// inputs
+		$('#settings-type').val(defaults.type);
 		$('#settings-direction').val(defaults.direction);
 		$('#settings-items').val(defaults.items);
-		$('#settings-speed').val(defaults.speed);
+		$('#settings-rotation-speed').val(defaults.rotationSpeed);
+		$('#settings-peak-velocity').val(defaults.peakVelocity);
+		$('#settings-rotation-frequency').val(defaults.rotationFrequency);
 		$('#settings-item-size').val(defaults.itemSize);
 		$('#settings-screen-size').val(defaults.screenSize);
 		$('#settings-screen-position').val(defaults.screenPosition);
 		$('#settings-metronome').val(defaults.metronome);
-		$('#settings-frequency').val(defaults.frequency);
+		$('#settings-metronome-frequency').val(defaults.metronomeFrequency);
 		$('#settings-alternate-rotation-every').val(defaults.alternateRotationEvery);
 		$('#settings-exit-after').val(defaults.exitAfter);
 		$('#settings-fullscreen').val(defaults.fullscreen);
@@ -753,11 +839,15 @@ $(document).ready(function() {
 	// update dependent settings elements
 	function updateDependentSettingsElements() {
 		$('#settings-metronome').trigger('change');
-		$('#settings-frequency').trigger('blur');
+		$('#settings-metronome-frequency').trigger('blur');
+		$('#settings-type').trigger('change');
+		$('#settings-rotation-frequency').trigger('blur');
 	}
 
 	// exit app and return to settings
 	function returnToSettings() {
+		// set time ended
+		runtime.timeEnded = Date.now();
 		// clear alternate every handle
 		if (runtime.alternateRotationEveryHandle !== null) {
 			clearInterval(runtime.alternateRotationEveryHandle);
@@ -769,7 +859,7 @@ $(document).ready(function() {
 			runtime.exitAfterHandle = null;
 		}
 		// check if fullscreen
-		if (settings.isFullscreenAvailable() && settings.isFullscreen()) {
+		if (settings.compute.isFullscreenAvailable() && settings.compute.isFullscreen()) {
 			// if yes, stop fullscreen
 			if (document.fullScreenElement) {
 				document.cancelFullScreen();
@@ -801,10 +891,13 @@ $(document).ready(function() {
 
 	// reverse direction
 	function reverseDirection() {
-		// set direction to opposite value
-		settings.direction = (settings.direction == 'clockwise' ? 'counterclockwise' : 'clockwise');
-		// recompute settings
-		computeSettings();
+		// only for linear type
+		if (settings.computed.isTypeLinear) {
+			// set direction to opposite value
+			settings.direction = (settings.direction == 'clockwise' ? 'counterclockwise' : 'clockwise');
+			// recompute settings
+			computeSettings();
+		}
 	}
 
 	// play next note
