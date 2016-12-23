@@ -117,18 +117,24 @@
 							</div>
 							<div class="panel-body">
 								<fieldset>
-									<div class="form-group col-sm-4">
+									<div class="form-group col-sm-6">
 										<label for="settings-direction">Rotation direction <a href="#" data-popup="This is the direction dots will rotate on the screen">(?)</a></label>
 										<select class="form-control" id="settings-direction">
 											<option value="clockwise">Clockwise</option>
 											<option value="counterclockwise">Counterclockwise</option>
 										</select>
 									</div>
-									<div class="form-group col-sm-4">
+									<div class="form-group col-sm-6">
 										<label for="settings-speed">Speed (degrees per second) <a href="#" data-popup="This is the number of degrees a dot travels in one second around the center circle">(?)</a></label>
 										<input type="text" class="form-control decimals-only" id="settings-speed" />
 									</div>
-									<div class="form-group col-sm-4">
+								</fieldset>
+								<fieldset>
+									<div class="form-group col-sm-6">
+										<label for="settings-alternate-rotation-every">Alternate rotation every (seconds) <a href="#" data-popup="This is the number of seconds after which the application should automatically toggle between clockwise and counterclockwise rotation">(?)</a></label>
+										<input type="text" class="form-control integers-only" id="settings-alternate-rotation-every" placeholder="Optional" />
+									</div>
+									<div class="form-group col-sm-6">
 										<label for="settings-exit-after">Exit after (seconds) <a href="#" data-popup="This is the number of seconds after which the application should automatically exit and return to the settings screen">(?)</a></label>
 										<input type="text" class="form-control integers-only" id="settings-exit-after" placeholder="Optional" />
 									</div>

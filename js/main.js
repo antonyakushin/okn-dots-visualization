@@ -35,6 +35,7 @@ $(document).ready(function() {
 		backgroundColor: '#000',
 		metronome: 'off',
 		frequency: 0.05,
+		alternateRotationEvery: '',
 		exitAfter: '',
 		fullscreen: 'on'
 	};
@@ -63,6 +64,7 @@ $(document).ready(function() {
 		currentNoteIndex: 0,
 		isDrawing: false,
 		isPlaying: false,
+		alternateRotationEveryHandle: null,
 		exitAfterHandle: null,
 		renderTextUntil: 0,
 		items: []
@@ -135,6 +137,7 @@ $(document).ready(function() {
 		settings.backgroundColor = $('#settings-color-background').spectrum('get').toHexString();
 		settings.metronome = ($('#settings-metronome').val() == 'on');
 		settings.frequency = parseFloat($('#settings-frequency').val());
+		settings.alternateRotationEvery = parseInt($('#settings-alternate-rotation-every').val());
 		settings.exitAfter = parseInt($('#settings-exit-after').val());
 		settings.fullscreen = ($('#settings-fullscreen').val() == 'on');
 		// update saved settings
@@ -205,6 +208,10 @@ $(document).ready(function() {
 				noteElement.pause();
 			}
 		}
+		// set alternate rotation every
+		if (settings.alternateRotationEvery > 0) {
+			runtime.alternateRotationEveryHandle = setInterval(reverseDirection, settings.alternateRotationEvery * 1000);
+		}
 		// set exit after
 		if (settings.exitAfter > 0) {
 			runtime.exitAfterHandle = setTimeout(returnToSettings, settings.exitAfter * 1000);
@@ -250,11 +257,12 @@ $(document).ready(function() {
 	$(document).on('keydown', function(e) {
 		// only when drawing
 		if (runtime.isDrawing) {
+			var multiplier;
 			switch (e.keyCode) {
 				case 37:
 				case 39:
 					// left or right
-					var multiplier = (e.keyCode == 39 ? 1 : -1);
+					multiplier = (e.keyCode == 39 ? 1 : -1);
 					// update speed
 					settings.speed += constants.speedChange * multiplier;
 					if (settings.speed >= 360) {
@@ -271,7 +279,7 @@ $(document).ready(function() {
 				case 38:
 				case 40:
 					// up or down
-					var multiplier = (e.keyCode == 38 ? 1 : -1);
+					multiplier = (e.keyCode == 38 ? 1 : -1);
 					// update size
 					settings.screenSize += constants.screenSizeChange * multiplier;
 					if (settings.screenSize >= 100) {
@@ -288,7 +296,7 @@ $(document).ready(function() {
 				case 81:
 				case 65:
 					// q or a
-					var multiplier = (e.keyCode == 81 ? 1 : -1);
+					multiplier = (e.keyCode == 81 ? 1 : -1);
 					// update position
 					settings.screenPosition += constants.screenPositionChange * multiplier;
 					if (settings.screenPosition >= 100) {
@@ -389,6 +397,9 @@ $(document).ready(function() {
 				case 'settings-items':
 					cleanVal = defaults.items;
 					break;
+				case 'settings-alternate-rotation-every':
+					cleanVal = defaults.alternateRotationEvery;
+					break;
 				case 'settings-exit-after':
 					cleanVal = defaults.exitAfter;
 					break;
@@ -396,6 +407,9 @@ $(document).ready(function() {
 					cleanVal = defaults.fullscreen;
 					break;
 			}
+		}
+		if ($this.attr('id') == 'settings-alternate-rotation-every' && cleanVal == 0) {
+			cleanVal = '';
 		}
 		if ($this.attr('id') == 'settings-exit-after' && cleanVal == 0) {
 			cleanVal = '';
@@ -631,6 +645,7 @@ $(document).ready(function() {
 		setSavedSetting(constants.cookieOptions.identifier + '.app.settings.items', $('#settings-items').val());
 		setSavedSetting(constants.cookieOptions.identifier + '.app.settings.metronome', $('#settings-metronome').val());
 		setSavedSetting(constants.cookieOptions.identifier + '.app.settings.frequency', $('#settings-frequency').val());
+		setSavedSetting(constants.cookieOptions.identifier + '.app.settings.alternateRotationEvery', $('#settings-alternate-rotation-every').val());
 		setSavedSetting(constants.cookieOptions.identifier + '.app.settings.exitAfter', $('#settings-exit-after').val());
 		setSavedSetting(constants.cookieOptions.identifier + '.app.settings.fullscreen', $('#settings-fullscreen').val());
 		setSavedSetting(constants.cookieOptions.identifier + '.app.settings.foregroundColor', $('#settings-color-foreground').spectrum('get').toHexString());
@@ -662,6 +677,9 @@ $(document).ready(function() {
 		}
 		if (getSavedSetting(constants.cookieOptions.identifier + '.app.settings.frequency')) {
 			$('#settings-frequency').val(getSavedSetting(constants.cookieOptions.identifier + '.app.settings.frequency'));
+		}
+		if (getSavedSetting(constants.cookieOptions.identifier + '.app.settings.alternateRotationEvery')) {
+			$('#settings-alternate-rotation-every').val(getSavedSetting(constants.cookieOptions.identifier + '.app.settings.alternateRotationEvery'));
 		}
 		if (getSavedSetting(constants.cookieOptions.identifier + '.app.settings.exitAfter')) {
 			$('#settings-exit-after').val(getSavedSetting(constants.cookieOptions.identifier + '.app.settings.exitAfter'));
@@ -718,6 +736,7 @@ $(document).ready(function() {
 		$('#settings-screen-position').val(defaults.screenPosition);
 		$('#settings-metronome').val(defaults.metronome);
 		$('#settings-frequency').val(defaults.frequency);
+		$('#settings-alternate-rotation-every').val(defaults.alternateRotationEvery);
 		$('#settings-exit-after').val(defaults.exitAfter);
 		$('#settings-fullscreen').val(defaults.fullscreen);
 		// color pickers
@@ -739,7 +758,12 @@ $(document).ready(function() {
 
 	// exit app and return to settings
 	function returnToSettings() {
-		// clear exit after handle if it exists
+		// clear alternate every handle
+		if (runtime.alternateRotationEveryHandle !== null) {
+			clearInterval(runtime.alternateRotationEveryHandle);
+			runtime.alternateRotationEveryHandle = null;
+		}
+		// clear exit after handle
 		if (runtime.exitAfterHandle !== null) {
 			clearTimeout(runtime.exitAfterHandle);
 			runtime.exitAfterHandle = null;
