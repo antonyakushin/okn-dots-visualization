@@ -14,7 +14,6 @@ $(document).ready(function() {
 		itemMaxEntropyMultiplier: 3,
 		itemEntropyMaxAttempts: 100,
 		itemSpaceMultiplier: 0.01,
-		centerItemRadiusMultiplier: 1.5,
 		speedChange: 0.5,
 		screenSizeChange: 0.5,
 		screenPositionChange: 0.25,
@@ -168,7 +167,7 @@ $(document).ready(function() {
 					var x = Math.cos(theta) * radiusRatio * (radiusOfMaxSize - maxItemEntropyForCalculation) + entropyX;
 					var y = Math.sin(theta) * radiusRatio * (radiusOfMaxSize - maxItemEntropyForCalculation) + entropyY;
 					// update overlap with center item
-					doesItemOverlapWithCenterItem = (Math.sqrt(Math.pow(x, 2) + Math.pow(y, 2)) <= radiusOfMaxSizeItem * constants.centerItemRadiusMultiplier + radiusOfMaxSizeItem + spaceOfMaxSize);
+					doesItemOverlapWithCenterItem = (Math.sqrt(Math.pow(x, 2) + Math.pow(y, 2)) <= radiusOfMaxSizeItem * 2 + spaceOfMaxSize);
 				}
 				// check whether item overlaps with other items
 				var doesItemOverlapWithOtherItems = false;
@@ -515,7 +514,7 @@ $(document).ready(function() {
 				// draw center item
 				context.fillStyle = settings.foregroundColor;
 				context.beginPath();
-				context.arc(0, 0, settings.computed.itemRadius * constants.centerItemRadiusMultiplier, 0, Math.PI * 2);
+				context.arc(0, 0, settings.computed.itemRadius, 0, Math.PI * 2);
 				context.closePath();
 				context.fill();
 				// draw dots
