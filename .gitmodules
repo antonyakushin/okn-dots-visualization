@@ -4,12 +4,6 @@
 [submodule "lib/bootstrap"]
 	path = lib/bootstrap
 	url = https://github.com/twbs/bootstrap
-[submodule "lib/mp3-piano-sound"]
-	path = lib/mp3-piano-sound
-	url = https://github.com/pffy/mp3-piano-sound
-[submodule "lib/ogg-piano-sound"]
-	path = lib/ogg-piano-sound
-	url = https://github.com/pffy/ogg-piano-sound
 [submodule "lib/js-cookie"]
 	path = lib/js-cookie
 	url = https://github.com/js-cookie/js-cookie
