@@ -7,3 +7,6 @@
 [submodule "lib/js-cookie"]
 	path = lib/js-cookie
 	url = https://github.com/js-cookie/js-cookie
+[submodule "lib/piano-mp3"]
+	path = lib/piano-mp3
+	url = https://github.com/fuhton/piano-mp3
